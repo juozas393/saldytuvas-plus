@@ -1,0 +1,276 @@
+@startuml Saldytuvas Plus - Logical Architecture (Package Diagram)
+!theme plain
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+
+title Saldytuvas Plus - Loginė Architektūra (Package Diagram)
+
+' ============================================
+' TOP-LEVEL PACKAGES
+' ============================================
+
+' 1) ŠEIMOS NARIO APP (Flutter UI + controllers)
+package "Šeimos nario posistemis" {
+  
+  package "Views" {
+    ' Visi 15 langai (UI Boundaries)
+    [HomePage <<screen>>]
+    [InventoryPage <<screen>>]
+    [ProductDetailsPage <<screen>>]
+    [AddProductPage <<screen>>]
+    [ReceiptAndBudgetPage <<screen>>]
+    [DealsPage <<screen>>]
+    [StoreDealsPage <<screen>>]
+    [ShoppingListScreen <<screen>>]
+    [LoginPage <<screen>>]
+    [ProfilePage <<screen>>]
+    [SettingsPage <<screen>>]
+    [MealPlanningPage <<screen>>]
+    [DishDetailsPage <<screen>>]
+    [AddRecipePage <<screen>>]
+    [NutritionPage <<screen>>]
+  }
+  
+  package "Controllers" {
+    ' Visi BLoC Controller'iai
+    [RouterController <<control>>]
+    [DashboardController <<control>>]
+    [InventoryController <<control>>]
+    [ProductController <<control>>]
+    [ProductScanController <<control>>]
+    [ReceiptAndBudgetController <<control>>]
+    [MealPlanningController <<control>>]
+    [RecipeController <<control>>]
+    [HealthEvaluationController <<control>>]
+    [ShoppingListController <<control>>]
+    [DealsController <<control>>]
+    [AuthController <<control>>]
+    [ProfileController <<control>>]
+    [SettingsController <<control>>]
+  }
+}
+
+' 2) ŠEIMOS ADMINISTRAVIMO POSISTEMIS
+package "Šeimos administravimo posistemis" {
+  
+  package "Controllers" {
+    [ShoppingListController <<control>>]
+  }
+}
+
+' 3) DOMAIN MODEL (bendras abiems posistemėms)
+package "DomainModel" {
+  
+  package "Entities" {
+    ' Visos 19 Entities iš jūsų modelio
+    [Administrator <<entity>>]
+    [Budget <<entity>>]
+    [Category <<entity>>]
+    [Deal <<entity>>]
+    [Dish <<entity>>]
+    [Environment <<entity>>]
+    [FoodRule <<entity>>]
+    [Inventory <<entity>>]
+    [Member <<entity>>]
+    [Notification <<entity>>]
+    [NutritionPlan <<entity>>]
+    [Product <<entity>>]
+    [PromoFlyer <<entity>>]
+    [Receipt <<entity>>]
+    [ReceiptLine <<entity>>]
+    [Recipe <<entity>>]
+    [ShoppingList <<entity>>]
+    [Store <<entity>>]
+    [User <<entity>>]
+  }
+  
+  package "Enumerations" {
+    ' Visi 7 Enumerations iš jūsų modelio
+    [DishType <<enumeration>>]
+    [FoodRuleStatus <<enumeration>>]
+    [Gender <<enumeration>>]
+    [MealPlanStatus <<enumeration>>]
+    [NotificationLevel <<enumeration>>]
+    [StorePriority <<enumeration>>]
+    [UserRole <<enumeration>>]
+  }
+}
+
+' 4) DATA ACCESS LAYER (bendras)
+package "DataAccess" {
+  
+  package "Repositories" {
+    [IInventoryRepository]
+    [IReceiptRepository]
+    [IBudgetRepository]
+    [IMealPlanRepository]
+    [IShoppingListRepository]
+    [IRecipeRepository]
+    [IUserRepository]
+    [IDealsRepository]
+    [ICategoryRepository]
+    [INotificationRepository]
+  }
+  
+  package "SupabaseGateway" {
+    [SupabaseGateway <<boundary>>]
+  }
+}
+
+' 5) EXTERNAL SERVICES / DEVICE ADAPTERS (bendras)
+package "ExternalServices" {
+  [CameraGalleryBoundary <<boundary>>]
+  [GeminiServiceBoundary <<boundary>>]
+  [OCRServiceBoundary <<boundary>>]
+  [OpenFoodFactsServiceBoundary <<boundary>>]
+  [SpoonacularServiceBoundary <<boundary>>]
+  [MobileScannerBoundary <<boundary>>]
+}
+
+' 6) CORE (cross-cutting, bendras)
+package "Core" {
+  package "Config" { 
+    [AppConfig] 
+  }
+  
+  package "Errors" { 
+    [Exceptions] 
+    [Failures] 
+  }
+  
+  package "Network" { 
+    [SupabaseClient] 
+    [HttpClient] 
+  }
+  
+  package "Storage" { 
+    [LocalStorage] 
+  }
+  
+  package "Theme" { 
+    [AppTheme] 
+  }
+  
+  package "Utils" { 
+    [Helpers] 
+  }
+}
+
+' 7) BUSINESS SERVICES (bendras)
+package "Services" {
+  [MealPlanningService]
+  [ShoppingListService]
+  [ReceiptParsingService]
+  [ImageProcessingService]
+  [OCRService]
+  [BarcodeScannerService]
+  [NutritionService]
+  [HealthScoreService]
+  [FoodRecognitionService]
+  [DealsScraperService]
+  [GeminiService]
+  [SpoonacularService]
+  [OpenFoodFactsService]
+  [NotificationService]
+  [ProductMatchingService]
+}
+
+' 8) ACTORS (aktoriai)
+package "Actors" {
+  [GoogleAuthentication <<actor>>]
+  [Šeimos administratorius <<actor>>]
+  [Šeimos narys <<actor>>]
+  [Svečias <<actor>>]
+  [GeminiAPI <<actor>>]
+  [MLKitOCR <<actor>>]
+  [Parduotuvės svetainė <<actor>>]
+  [SpoonacularAPI <<actor>>]
+}
+
+' ============================================
+' DEPENDENCIES - Priklausomybės
+' ============================================
+
+' Views → Controllers (front-end MVC)
+"Šeimos nario posistemis"."Views" ..> "Šeimos nario posistemis"."Controllers" : uses
+
+' Controllers → Services + Domain
+"Šeimos nario posistemis"."Controllers" ..> "Services" : uses
+"Šeimos nario posistemis"."Controllers" ..> "DomainModel" : uses entities
+"Šeimos administravimo posistemis"."Controllers" ..> "Services" : uses
+"Šeimos administravimo posistemis"."Controllers" ..> "DomainModel" : uses entities
+
+' Services → Domain + DataAccess + External
+"Services" ..> "DomainModel" : uses entities
+"Services" ..> "DataAccess"."Repositories" : uses
+"Services" ..> "ExternalServices" : calls
+
+' DataAccess → Supabase + Core
+"DataAccess"."Repositories" ..> "DataAccess"."SupabaseGateway" : uses
+"DataAccess"."SupabaseGateway" ..> "Core"."Network"."SupabaseClient" : uses
+
+' Subsystems → Core
+"Šeimos nario posistemis" ..> "Core" : uses
+"Šeimos administravimo posistemis" ..> "Core" : uses
+"Services" ..> "Core" : uses
+
+' Actors → UI / Controllers / Boundaries
+"Actors"."Šeimos narys" ..> "Šeimos nario posistemis"."Views" : interacts
+"Actors"."Šeimos administratorius" ..> "Šeimos administravimo posistemis"."Controllers" : interacts
+"Actors"."GoogleAuthentication" ..> "Core"."Network"."HttpClient" : OAuth
+"Actors"."GeminiAPI" ..> "ExternalServices"."GeminiServiceBoundary" : external API
+"Actors"."MLKitOCR" ..> "ExternalServices"."OCRServiceBoundary" : external API
+"Actors"."Parduotuvės svetainė" ..> "Services"."DealsScraperService" : provides data
+"Actors"."SpoonacularAPI" ..> "ExternalServices"."SpoonacularServiceBoundary" : external API
+
+' Navigation
+"Šeimos nario posistemis"."Views"."NutritionPage" ..> "Šeimos nario posistemis"."Views"."MealPlanningPage" : navigates to
+
+note right of "Šeimos nario posistemis"
+  **Flutter App:**
+  - Views = UI Boundaries (15 langų)
+  - Controllers = BLoC objektai (Events → States)
+  - Viskas vyksta klientėje (mobile/web app)
+end note
+
+note right of "DomainModel"
+  **Bendras Domain Model:**
+  - 19 Entities
+  - 7 Enumerations
+  - Naudojamas abiejose posistemėse
+end note
+
+note right of "Services"
+  **Services = verslo logika:**
+  - Koordinuoja Repositories + External Services
+  - Naudoja Domain entities
+  - Vyksta Flutter app viduje
+end note
+
+note bottom of "DataAccess"."SupabaseGateway"
+  SupabaseGateway wrap'ina
+  Core.Network.SupabaseClient
+  (nėra dubliavimo)
+end note
+
+note top of "Saldytuvas Plus"
+  **SVARBU: Loginė vs Fizinė Architektūra**
+  
+  **Ši diagrama rodo LOGINĘ architektūrą:**
+  - Rodo KAS naudoja KĄ (priklausomybės)
+  - DomainModel/DataAccess = bendri loginiai paketai
+  - Entities/Repositories logiškai yra bendri (bet fiziniame kode yra feature-based)
+  
+  **Jūsų fizinė struktūra (lib/):**
+  - lib/features/inventory/models/ - Entities (feature-based)
+  - lib/features/inventory/repositories/ - Repositories (feature-based)
+  - lib/services/ - Services (bendras)
+  
+  **Išvada:** Diagrama teisinga - rodo priklausomybes, ne failų vietas!
+  
+  **Flutter vs Django:**
+  - Django: Frontend ↔ Backend (dvi sistemos)
+  - Flutter: Viskas vienoje aplikacijoje (klientėje)
+end note
+
+@enduml

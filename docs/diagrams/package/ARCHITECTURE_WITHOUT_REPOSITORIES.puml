@@ -1,0 +1,149 @@
+@startuml Architecture Without Repositories
+
+!theme plain
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+
+title Saldytuvas Plus – Architecture BE Repositories
+
+' ============================================
+' TOP-LEVEL PACKAGES
+' ============================================
+
+' 1) PRESENTATION LAYER
+package "ClientApp" {
+  
+  package "Views" {
+    [HomePage <<screen>>]
+    [InventoryPage <<screen>>]
+    [ProductDetailsPage <<screen>>]
+    [AddProductPage <<screen>>]
+    [ReceiptAndBudgetPage <<screen>>]
+    [DealsPage <<screen>>]
+    [MealPlanningPage <<screen>>]
+    [ProfilePage <<screen>>]
+    [SettingsPage <<screen>>]
+    ' ... kiti views
+  }
+  
+  package "Controllers" {
+    package "MemberControllers" {
+      [InventoryController <<control>>]
+      [ProductController <<control>>]
+      [ReceiptAndBudgetController <<control>>]
+      [MealPlanningController <<control>>]
+      [DealsController <<control>>]
+      [AuthController <<control>>]
+      ' ... kiti member controllers
+    }
+    
+    package "AdminControllers" {
+      [BudgetController <<control>>]
+      [FamilyMembersController <<control>>]
+      [ShoppingListController <<control>>]
+      ' ... kiti admin controllers
+    }
+  }
+}
+
+' 2) DOMAIN MODEL
+package "DomainModel" {
+  
+  package "Entities" {
+    [Product <<entity>>]
+    [Inventory <<entity>>]
+    [Receipt <<entity>>]
+    [Budget <<entity>>]
+    [MealPlan <<entity>>]
+    [User <<entity>>]
+    ' ... kiti entities
+  }
+  
+  package "Enumerations" {
+    [Category <<enumeration>>]
+    [UserRole <<enumeration>>]
+    ' ... kiti enumerations
+  }
+}
+
+' 3) CORE
+package "Core" {
+  package "Network" {
+    [SupabaseClient]
+    [HttpClient]
+  }
+  
+  package "Config" {
+    [AppConfig]
+  }
+  
+  package "Errors" {
+    [Exceptions]
+    [Failures]
+  }
+  
+  package "Theme" {
+    [AppTheme]
+  }
+  
+  package "Storage" {
+    [LocalStorage]
+  }
+  
+  package "Utils" {
+    [Helpers]
+  }
+}
+
+' 4) EXTERNAL SERVICES
+package "ExternalServices" {
+  [CameraGalleryBoundary <<boundary>>]
+  [MobileScannerBoundary <<boundary>>]
+  [OpenFoodFactsServiceBoundary <<boundary>>]
+  [OCRServiceBoundary <<boundary>>]
+  [GeminiServiceBoundary <<boundary>>]
+}
+
+' ============================================
+' DEPENDENCIES - Nauji rysiai BE Repository
+' ============================================
+
+' 1. Views → Controllers
+ClientApp.Views ..> ClientApp.Controllers : uses
+
+' 2. Controllers → DomainModel.Entities
+ClientApp.Controllers.MemberControllers ..> DomainModel.Entities : uses entities
+ClientApp.Controllers.AdminControllers ..> DomainModel.Entities : uses entities
+
+' 3. Controllers → Core.Network.SupabaseClient (TIESIOGIAI - NAUJA!)
+ClientApp.Controllers ..> Core.Network.SupabaseClient : uses (tiesiogiai)
+
+' 4. Controllers → ExternalServices
+ClientApp.Controllers ..> ExternalServices : uses
+
+' 5. Controllers → Core (utilities)
+ClientApp.Controllers ..> Core : uses
+
+' 6. DomainModel vidinės priklausomybės
+DomainModel.Entities ..> DomainModel.Enumerations : uses
+
+' 7. ExternalServices → Core.Network.HttpClient
+ExternalServices ..> Core.Network.HttpClient : uses
+
+note right of ClientApp.Controllers
+  **BE Repository Pattern:**
+  - Controllers naudoja SupabaseClient tiesiogiai
+  - Nėra abstrakcijos sluoksnio
+  - Lengviau kodas, bet sudėtingiau testuoti
+  - Neįmanoma lengvai keisti duomenų šaltinio
+end note
+
+note right of Core.Network
+  **SupabaseClient:**
+  - Naudojamas tiesiogiai Controllers
+  - Nėra Repository tarpinio sluoksnio
+  - Controllers importuoja supabase_flutter paketą
+end note
+
+@enduml
+

@@ -1,0 +1,282 @@
+@startuml SaldytuvasPlus-Architecture
+
+!theme plain
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+
+title Saldytuvas Plus – Complete Logical Architecture
+
+' =====================================================
+' ROOT
+' =====================================================
+package "SaldytuvasPlus" {
+
+' =====================================================
+' 1. MEMBER SUBSYSTEM (šeimos narys – Flutter klientas)
+' =====================================================
+package "MemberSubsystem" {
+  package "Views" {
+    [HomePage]
+    [LoginPage]
+    [InventoryPage]
+    [ProductDetailsPage]
+    [AddProductPage]
+    [ReceiptAndBudgetPage]
+    [DealsPage]
+    [StoreDealsPage]
+    [ShoppingListScreen]
+    [MealPlanningPage]
+    [DishDetailsPage]
+    [AddRecipePage]
+    [NutritionPage]
+    [ProfilePage]
+    [SettingsPage]
+  }
+
+  package "Controllers" {
+    [RouterController]
+    [DashboardController]
+    [InventoryController]
+    [ProductController]
+    [ProductScanController]
+    [ReceiptAndBudgetController]
+    [BudgetController]
+    [MealPlanningController]
+    [HealthEvaluationController]
+    [RecipeController]
+    [ShoppingListController]
+    [DealsController]
+    [AuthController]
+    [ProfileController]
+    [SettingsController]
+  }
+}
+
+' =====================================================
+' 2. ADMIN SUBSYSTEM (šeimos administratoriaus UI / logika)
+' =====================================================
+package "AdminSubsystem" {
+  ' Administratoriaus valdymo funkcijos
+  note right: Admin turi papildomas funkcijas\nduomenų valdymui
+}
+
+' =====================================================
+' 3. DOMAIN MODEL (bendras visai sistemai)
+' =====================================================
+package "DomainModel" {
+  package "Enumerations" {
+    [DishType]
+    [FoodRuleStatus]
+    [Gender]
+    [MealPlanStatus]
+    [NotificationLevel]
+    [StorePriority]
+    [UserRole]
+  }
+
+  package "Entities" {
+    [Administrator]
+    [Budget]
+    [Category]
+    [Deal]
+    [Dish]
+    [Environment]
+    [FoodRule]
+    [Inventory]
+    [Member]
+    [Notification]
+    [NutritionPlan]
+    [Product]
+    [PromoFlyer]
+    [Receipt]
+    [ReceiptLine]
+    [Recipe]
+    [ShoppingList]
+    [Store]
+    [User]
+  }
+}
+
+' =====================================================
+' 4. DATA ACCESS LAYER (Clean Architecture - Data sluoksnis)
+' =====================================================
+package "DataAccess" {
+  package "Repositories" {
+    [IInventoryRepository]
+    [IReceiptRepository]
+    [IBudgetRepository]
+    [IMealPlanRepository]
+    [IShoppingListRepository]
+    [IRecipeRepository]
+    [IUserRepository]
+    [IDealsRepository]
+    [ICategoryRepository]
+    [INotificationRepository]
+  }
+  
+  package "SupabaseGateway" {
+    [SupabaseGateway]
+  }
+}
+
+' =====================================================
+' 5. SERVICES (verslo logika, „use–case" lygmuo)
+' =====================================================
+package "Services" {
+  [MealPlanningService]
+  [ShoppingListService]
+  [ReceiptParsingService]
+  [ImageProcessingService]
+  [OCRService]
+  [BarcodeScannerService]
+  [NutritionService]
+  [HealthScoreService]
+  [FoodRecognitionService]
+  [DealsScraperService]
+  [GeminiService]
+  [SpoonacularService]
+  [OpenFoodFactsService]
+  [NotificationService]
+  [ProductMatchingService]
+}
+
+' =====================================================
+' 6. EXTERNAL SERVICES / BOUNDARIES (adapteriai į išorę)
+' =====================================================
+package "ExternalServices" {
+  [CameraGalleryBoundary]
+  [GeminiServiceBoundary]
+  [OCRServiceBoundary]
+  [OpenFoodFactsServiceBoundary]
+  [SpoonacularServiceBoundary]
+  [MobileScannerBoundary]
+}
+
+' =====================================================
+' 7. CORE / INFRASTRUCTURE
+' =====================================================
+package "Core" {
+  package "Config" {
+    [AppConfig]
+  }
+
+  package "Errors" {
+    [Exceptions]
+    [Failures]
+  }
+
+  package "Network" {
+    [SupabaseClient]
+    [HttpClient]
+  }
+
+  package "Storage" {
+    [LocalStorage]
+  }
+
+  package "Theme" {
+    [AppTheme]
+  }
+
+  package "Utils" {
+    [Helpers]
+  }
+}
+
+' =====================================================
+' 8. ACTORS (iš reikalavimų analizės)
+' =====================================================
+package "Actors" {
+  [GoogleAuthentication]
+  [FamilyAdministrator]
+  [FamilyMember]
+  [Guest]
+  [GeminiAPI]
+  [MLKitOCR]
+  [StoreWebsite]
+}
+
+} ' end SaldytuvasPlus
+
+' =====================================================
+' DEPENDENCIES
+' =====================================================
+
+' Flutter UI → Controllers
+MemberSubsystem.Views ..> MemberSubsystem.Controllers : uses
+
+' Member controllers → Domain + Services + DataAccess
+MemberSubsystem.Controllers ..> DomainModel.Entities : uses
+MemberSubsystem.Controllers ..> Services : uses
+MemberSubsystem.Controllers ..> DataAccess.Repositories : uses
+
+' Admin controllers → Domain + Services + DataAccess
+AdminSubsystem ..> DomainModel.Entities : uses
+AdminSubsystem ..> Services : uses
+AdminSubsystem ..> DataAccess.Repositories : uses
+
+' Entities → Enumerations
+DomainModel.Entities ..> DomainModel.Enumerations : uses
+
+' Services → Domain + External + DataAccess + Core
+Services ..> DomainModel.Entities : uses
+Services ..> ExternalServices : calls
+Services ..> DataAccess.Repositories : uses
+Services ..> Core : uses
+
+' DataAccess → External + Core
+DataAccess.Repositories ..> DataAccess.SupabaseGateway : uses
+DataAccess.SupabaseGateway ..> Core.Network.SupabaseClient : uses
+
+' ExternalServices → Core.Network
+ExternalServices ..> Core.Network.HttpClient : uses
+
+' Actors → UI / External services
+Actors.FamilyMember ..> MemberSubsystem.Views : interacts
+Actors.FamilyAdministrator ..> AdminSubsystem : manages
+Actors.Guest ..> MemberSubsystem.Views : limited access
+Actors.GoogleAuthentication ..> ExternalServices : OAuth / sign-in
+Actors.GeminiAPI ..> ExternalServices.GeminiServiceBoundary : provides AI
+Actors.MLKitOCR ..> ExternalServices.OCRServiceBoundary : provides OCR
+Actors.StoreWebsite ..> ExternalServices.OpenFoodFactsServiceBoundary : provides data
+
+note top of "Saldytuvas Plus"
+  **SVARBU: Loginė vs Fizinė Architektūra**
+  
+  **Ši diagrama rodo LOGINĘ architektūrą:**
+  - Rodo KAS naudoja KĄ (priklausomybės)
+  - DomainModel/DataAccess = bendri loginiai paketai
+  - Entities/Repositories logiškai yra bendri (bet fiziniame kode yra feature-based)
+  
+  **Jūsų fizinė struktūra (lib/):**
+  - lib/features/inventory/models/ - Entities (feature-based)
+  - lib/features/inventory/repositories/ - Repositories (feature-based)
+  - lib/services/ - Services (bendras)
+  
+  **Išvada:** Diagrama teisinga - rodo priklausomybes, ne failų vietas!
+  
+  **Flutter vs Django:**
+  - Django: Frontend ↔ Backend (dvi sistemos)
+  - Flutter: Viskas vienoje aplikacijoje (klientėje)
+end note
+
+note right of "Services"
+  **Services = verslo logika:**
+  - Koordinuoja Repositories + External Services
+  - Naudoja Domain entities
+  - Vyksta Flutter app viduje
+  
+  **Services vs Boundaries:**
+  - Service = verslo logika (pvz. MealPlanningService)
+  - Boundary = išorės adapteris (pvz. GeminiServiceBoundary)
+end note
+
+note right of "DataAccess"
+  **Data Access Layer (Clean Architecture):**
+  - Repositories = abstraktūs interfeisai
+  - SupabaseGateway = konkreti implementacija
+  - Viskas wrap'ina SupabaseClient iš Core.Network
+end note
+
+@enduml
+

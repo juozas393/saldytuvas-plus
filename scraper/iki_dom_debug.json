@@ -1,0 +1,157 @@
+{
+  "title": "Akcijos šią savaitę | Savaitės pasiūlymai | IKI. Arčiau Tavęs!",
+  "url": "https://iki.lt/akcijos/savaites-akcijos/",
+  "totalElements": 3042,
+  "topClasses": [
+    "d-flex: 497",
+    "position-relative: 324",
+    "flex-column: 284",
+    "justify-content-between: 224",
+    "w-100: 208",
+    "button: 180",
+    "menu-item: 175",
+    "element-level-2: 174",
+    "button-menu: 128",
+    "justify-content-center: 128",
+    "align-items-center: 123",
+    "flex-row: 122",
+    "button-plain: 120",
+    "promo_bottom_item: 120",
+    "akcija_description: 120",
+    "col-12: 112",
+    "menu-item-type-post_type: 97",
+    "m-0: 81",
+    "ml-n1: 75",
+    "mx-0: 67",
+    "p-0: 63",
+    "col-md-4: 63",
+    "h-100: 63",
+    "price_int: 62",
+    "price_cents: 62",
+    "align-items-end: 61",
+    "mt-3: 61",
+    "col-lg-3: 61",
+    "menu-item-type-custom: 60",
+    "menu-item-object-custom: 60",
+    "menu-item-object-page: 60",
+    "tag_class-savaites-akcijos: 60",
+    "akcijoskortele: 60",
+    "akcija-loyalty: 60",
+    "akcija-loyalty-inner: 60",
+    "col-sm-6: 60",
+    "akcija_bg: 60",
+    "p-3: 60",
+    "akcija__tags: 60",
+    "akcija__tags_top_label: 60",
+    "akcija__wrap-top: 60",
+    "promo-top-wrapper: 60",
+    "pl-0: 60",
+    "akcija_title: 60",
+    "pr-2: 60",
+    "akcija__image: 60",
+    "card-img-top: 60",
+    "promo_bottom: 60",
+    "flex-grow-1: 60",
+    "promo_shop_block: 60"
+  ],
+  "potentialProductCards": [
+    {
+      "tag": "DIV",
+      "classes": "\ntag_class-tag_iki-premija tag_class-savaites-akcijos tag_class-super-kaina  p-0 akcijoskortele akcija-loyalty d-flex flex-column akcija-loyalty-inner col-12 col-sm-6 col-md-4 col-lg-3",
+      "text": "ROKIŠKIO NAMINĖ varškė\n\n1 kg, 9 % rieb.\n\nPIRKTI\n-\n50\n%\n3\n49\n6\n09\n\nGalioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"\ntag_class-tag_iki-premija tag_class-savaites-akcijos tag_class-super-kaina  p-0 akcijoskortele akcija-loyalty d-flex flex-column akcija-loyalty-inner col-12 col-sm-6 col-md-4 col-lg-3\">\n\n\t<div class=\"akcija_bg p-3 d-flex flex-column justify-content-between position-relative\">\n\t\t<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>"
+    },
+    {
+      "tag": "DIV",
+      "classes": "akcija_bg p-3 d-flex flex-column justify-content-between position-relative",
+      "text": "ROKIŠKIO NAMINĖ varškė\n\n1 kg, 9 % rieb.\n\nPIRKTI\n-\n50\n%\n3\n49\n6\n09\n\nGalioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"akcija_bg p-3 d-flex flex-column justify-content-between position-relative\">\n\t\t<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>\n\n\t\t\t<div class=\"akcija__wrap-top\">\n\t\t\t\t<div class=\"promo-top-wrapper pl-0 col-12 pr-0\">\n\t\t\t\t\t<p class=\"akcija_title w-100\">\n\t\t\t\t\t\tROKIŠKIO NAMINĖ varškė\t\t\t\t\t</p>\n\t\t\t\t\t<div class=\"promo_bottom_item\">\n\t"
+    },
+    {
+      "tag": "DIV",
+      "classes": "d-flex flex-column justify-content-between position-relative h-100",
+      "text": "ROKIŠKIO NAMINĖ varškė\n\n1 kg, 9 % rieb.\n\nPIRKTI\n-\n50\n%\n3\n49\n6\n09\n\nGalioja: 03.09 - 03.15",
+      "childCount": 6,
+      "html": "<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>\n\n\t\t\t<div class=\"akcija__wrap-top\">\n\t\t\t\t<div class=\"promo-top-wrapper pl-0 col-12 pr-0\">\n\t\t\t\t\t<p class=\"akcija_title w-100\">\n\t\t\t\t\t\tROKIŠKIO NAMINĖ varškė\t\t\t\t\t</p>\n\t\t\t\t\t<div class=\"promo_bottom_item\">\n\t\t\t\t\t\t<p class=\"akcija_description pr-2\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t1 kg, 9 % rieb.\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t\t"
+    },
+    {
+      "tag": "DIV",
+      "classes": "mt-3",
+      "text": "Galioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"mt-3\">\n\t\t\t\t<p class=\"m-0 w-100 akcija_description text-center\">Galioja: 03.09 - 03.15</p>\n\t\t\t</div>"
+    },
+    {
+      "tag": "DIV",
+      "classes": "\ntag_class-tag_iki-premija tag_class-savaites-akcijos tag_class-super-kaina  p-0 akcijoskortele akcija-loyalty d-flex flex-column akcija-loyalty-inner col-12 col-sm-6 col-md-4 col-lg-3",
+      "text": "Šviežiai kiaulienai\n\nĮvairių rūšių, (nuolaida netaikoma smulkintai mėsa)\n\nPIRKTI\n-\n30\n%\n\nGalioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"\ntag_class-tag_iki-premija tag_class-savaites-akcijos tag_class-super-kaina  p-0 akcijoskortele akcija-loyalty d-flex flex-column akcija-loyalty-inner col-12 col-sm-6 col-md-4 col-lg-3\">\n\n\t<div class=\"akcija_bg p-3 d-flex flex-column justify-content-between position-relative\">\n\t\t<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>"
+    },
+    {
+      "tag": "DIV",
+      "classes": "akcija_bg p-3 d-flex flex-column justify-content-between position-relative",
+      "text": "Šviežiai kiaulienai\n\nĮvairių rūšių, (nuolaida netaikoma smulkintai mėsa)\n\nPIRKTI\n-\n30\n%\n\nGalioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"akcija_bg p-3 d-flex flex-column justify-content-between position-relative\">\n\t\t<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>\n\n\t\t\t<div class=\"akcija__wrap-top\">\n\t\t\t\t<div class=\"promo-top-wrapper pl-0 col-12 pr-0\">\n\t\t\t\t\t<p class=\"akcija_title w-100\">\n\t\t\t\t\t\tŠviežiai kiaulienai\t\t\t\t\t</p>\n\t\t\t\t\t<div class=\"promo_bottom_item\">\n\t\t\t\t"
+    },
+    {
+      "tag": "DIV",
+      "classes": "d-flex flex-column justify-content-between position-relative h-100",
+      "text": "Šviežiai kiaulienai\n\nĮvairių rūšių, (nuolaida netaikoma smulkintai mėsa)\n\nPIRKTI\n-\n30\n%\n\nGalioja: 03.09 - 03.15",
+      "childCount": 6,
+      "html": "<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>\n\n\t\t\t<div class=\"akcija__wrap-top\">\n\t\t\t\t<div class=\"promo-top-wrapper pl-0 col-12 pr-0\">\n\t\t\t\t\t<p class=\"akcija_title w-100\">\n\t\t\t\t\t\tŠviežiai kiaulienai\t\t\t\t\t</p>\n\t\t\t\t\t<div class=\"promo_bottom_item\">\n\t\t\t\t\t\t<p class=\"akcija_description pr-2\">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tĮvairių rūšių, (nuolaida netaikoma smul"
+    },
+    {
+      "tag": "DIV",
+      "classes": "mt-3",
+      "text": "Galioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"mt-3\">\n\t\t\t\t<p class=\"m-0 w-100 akcija_description text-center\">Galioja: 03.09 - 03.15</p>\n\t\t\t</div>"
+    },
+    {
+      "tag": "DIV",
+      "classes": "\ntag_class-tag_iki-premija tag_class-savaites-akcijos tag_class-super-kaina  p-0 akcijoskortele akcija-loyalty d-flex flex-column akcija-loyalty-inner col-12 col-sm-6 col-md-4 col-lg-3",
+      "text": "KĖDAINIŲ konservuotoms daržovėms, padažams, kečupui\n\nĮvairių rūšių. Ir IKI EXPRESS\n\nPIRKTI\n-\n40\n%\n\nGalioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"\ntag_class-tag_iki-premija tag_class-savaites-akcijos tag_class-super-kaina  p-0 akcijoskortele akcija-loyalty d-flex flex-column akcija-loyalty-inner col-12 col-sm-6 col-md-4 col-lg-3\">\n\n\t<div class=\"akcija_bg p-3 d-flex flex-column justify-content-between position-relative\">\n\t\t<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>"
+    },
+    {
+      "tag": "DIV",
+      "classes": "akcija_bg p-3 d-flex flex-column justify-content-between position-relative",
+      "text": "KĖDAINIŲ konservuotoms daržovėms, padažams, kečupui\n\nĮvairių rūšių. Ir IKI EXPRESS\n\nPIRKTI\n-\n40\n%\n\nGalioja: 03.09 - 03.15",
+      "childCount": 1,
+      "html": "<div class=\"akcija_bg p-3 d-flex flex-column justify-content-between position-relative\">\n\t\t<div class=\"d-flex flex-column justify-content-between position-relative h-100\">\n\t\t\t<div class=\"akcija__tags\">\n\t\t\t\t\t\t\t\t\n\t\t\t</div>\n\n\t\t\t\n\t\t\t\n\t\t\t\n\t<div class=\"akcija__tags_top_label position-relative\">\n\t\t\t</div>\n\n\t\t\t<div class=\"akcija__wrap-top\">\n\t\t\t\t<div class=\"promo-top-wrapper pl-0 col-12 pr-0\">\n\t\t\t\t\t<p class=\"akcija_title w-100\">\n\t\t\t\t\t\tKĖDAINIŲ konservuotoms daržovėms, padažams, kečupui\t\t\t\t\t</p>\n\t\t\t\t\t<div"
+    }
+  ],
+  "productImages": [
+    {
+      "src": "https://iki.lt/wp-content/themes/iki/assets/svg/iki-logo-u.svg",
+      "alt": "Parduotuvių tinklas IKI",
+      "parentClasses": "logo"
+    },
+    {
+      "src": "https://iki.lt/wp-content/themes/iki/assets/img/menu/visos-korteles.svg",
+      "alt": "Visos kortelės",
+      "parentClasses": "menu-label"
+    },
+    {
+      "src": "https://iki.lt/wp-content/themes/iki/assets/img/menu/lojalumo-kortele.svg",
+      "alt": "IKI Lojalumo kortelė",
+      "parentClasses": ""
+    },
+    {
+      "src": "https://iki.lt/wp-content/themes/iki/assets/img/menu/senjoru-kortele.svg",
+      "alt": "IKI Senjorams",
+      "parentClasses": ""
+    },
+    {
+      "src": "https://iki.lt/wp-content/themes/iki/assets/img/menu/verslo-kortele.svg",
+      "alt": "IKI lojalumo kortelė verslui",
+      "parentClasses": ""
+    }
+  ],
+  "bodyText": "Naujienos\nIKI prekių ženklai \nAlkoholiniai gėrimai \nReceptai \nApie įmonę \nTvarumas \nKarjera\nInovacijos\nAkcijos\nLeidiniai\nIKI kortelės \nParduotuvės\nIKI SENJORO KORTELĖ\nE-PARDUOTUVĖ\nPRISIJUNK\nSavaitės akcijos\nSavaitės akcijos\nSavaitgalio pasiūlymai\nPasaulio virtuvių fiesta\nPigintuvas\nIšpardavimo prekės\nVISOS KATEGORIJOS\n\nPasiūlymai galioja nuo 2026 03 09 iki 2026 03 15 d. Pasiūlymai galioja tik su IKI kortele. Prekių kiekis ribotas. Kai kurios prekės gali būti išparduotos pirmąją pasiūlymo dieną arba atsirasti kitų kliūčių, nepriklausomų nuo IKI valios, kada baigsis prekių atsargos. Nuolaidos nesumuojamos. Nuolaidos netaikomos CLEVER, HEBĖ prekių ženklu pažymėtoms prekėms, išskyrus CLEVER daržoves, akcijų ir išpardavimo prekėms, IKI GO! parduotuvėse. Skirtingose parduotuvėse (IKI, IKI Express) prekių ir jų rūšių skaičius gali skirtis.\nKiekvieną savaitę atnaujiname kainų pasiūlymus visiems IKI parduotuvės klientams. Mūsų misija – užtikrinti, kad kiekvienas klientas rastų visko, ko jam reikia geromis kainomis. Todėl pasirūpiname patraukliausiomis savaitės akcijomis, atsižvelgdami į klientų poreikius bei sezoniškumą. Čia galite rasti visas šios savaitės akcijas: augalams, kosmetikai, šaldytam maistui ir ledams, bakalėjai, namų ūkio ir gyvūnų prekėms, šviežiai mėsai, duonai ir pieno gaminiams, kiaušiniams, vaisiams ir daržovėms, saldumynams, konditerijai, kavai ir arbatai, žuviai ir kulinarijos gaminiams. Akcijos, pateiktos nuolaidų kataloge, galioja turintiems IKI lojalumo kortele.\n\nROKIŠKIO NAMINĖ varškė\n\n1 kg, 9 % rieb.\n\nPIRKTI\n-\n50\n%\n3\n49\n6\n09\n\nGalioja: 03.09 - 03.15\n\nŠviežiai kiaulienai\n\nĮvairių rūšių, (nuolaida netaikoma smulkintai mėsa)\n\nPIRKTI\n-\n30\n%\n\nGalioja: 03.09 - 03.15\n\nKĖDAINIŲ konservuotoms daržovėms, padažams, kečupui\n\nĮvairių rūšių. Ir IKI EXPRESS\n\nPIRKTI\n-\n40\n%\n\nGalioja: 03.09 - 03.15\n\nBON VIA slyviniai vynuoginiai pomidoriukai\n\n1,99 Eur/vnt. Ir IKI EXPRESS\n\nPIRKTI\n1+1\n1\n99\n\nGalioja: 03.09 - 03.15\n\nVytintoms BERNŲ dešroms\n\n4 rūšių\n\nPIRKTI\n-\n50\n%\n\nGalioja"
+}

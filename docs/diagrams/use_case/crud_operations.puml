@@ -1,0 +1,92 @@
+@startuml CRUD Operations Use Case
+!theme plain
+skinparam usecase {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+
+title CRUD operacijos - Use Case Diagram
+
+' Aktoriai
+actor "Šeimos narys" as Member #FFE0B2
+actor "Šeimos administratorius" as Admin #FFE0B2
+
+' Pagrindinis CRUD use case
+usecase (CRUD operacijos\n(Valdyti entitetą)) as CRUD #C8E6C9
+
+' Konkretūs CRUD extend use case'ai su extend point'ais
+usecase (Sukurti) as Create
+usecase (Redaguoti) as Edit
+usecase (Ištrinti) as Delete
+
+' Use case'ai, kurie naudoja CRUD
+usecase (Valdyti produktus) as ManageProducts
+usecase (Valdyti mitybos planą) as ManageMealPlan
+usecase (Valdyti pirkinių sąrašą) as ManageShoppingList
+usecase (Valdyti biudžetą) as ManageBudget
+usecase (Valdyti šeimos narius) as ManageMembers
+usecase (Valdyti maisto taisykles) as ManageFoodRules
+usecase (Valdyti paskyrą) as ManageAccount
+usecase (Valdyti receptus) as ManageRecipes
+usecase (Valdyti inventorių) as ManageInventory
+
+' Ryšiai tarp aktorių ir CRUD
+Member --> CRUD
+Admin --> CRUD
+
+' Extend ryšiai (operacijos) su extend point'ais
+Create ..> CRUD : <<extend>>\n<<extend point: create>>
+Edit ..> CRUD : <<extend>>\n<<extend point: edit>>
+Delete ..> CRUD : <<extend>>\n<<extend point: delete>>
+
+' Include ryšiai (CRUD naudojamas kituose use case'uose)
+ManageProducts ..> CRUD : <<include>>
+ManageMealPlan ..> CRUD : <<include>>
+ManageShoppingList ..> CRUD : <<include>>
+ManageBudget ..> CRUD : <<include>>
+ManageMembers ..> CRUD : <<include>>
+ManageFoodRules ..> CRUD : <<include>>
+ManageAccount ..> CRUD : <<include>>
+ManageRecipes ..> CRUD : <<include>>
+ManageInventory ..> CRUD : <<include>>
+
+' Aktorių ryšiai su konkrečiais use case'ais
+Member --> ManageProducts
+Member --> ManageAccount
+Admin --> ManageMealPlan
+Admin --> ManageShoppingList
+Admin --> ManageBudget
+Admin --> ManageMembers
+Admin --> ManageFoodRules
+Admin --> ManageRecipes
+Admin --> ManageInventory
+
+note right of CRUD
+  Bendras CRUD use case'as su 3 extend point'ais:
+  • create - sukurti naują entitetą
+  • edit - redaguoti esamą entitetą
+  • delete - ištrinti entitetą
+  
+  Šis use case'as gali būti include'inamas
+  visuose valdymo use case'uose.
+end note
+
+note bottom of Create
+  Operacija: Sukurti naują įrašą
+  Pvz.: Sukurti produktą, receptą, valgį
+end note
+
+note bottom of Edit
+  Operacija: Redaguoti esamą įrašą
+  Pvz.: Redaguoti produkto informaciją,
+  redaguoti mitybos plano valgį
+end note
+
+note bottom of Delete
+  Operacija: Ištrinti esamą įrašą
+  Pvz.: Ištrinti produktą, receptą,
+  pašalinti valgį iš plano
+end note
+
+@enduml
+

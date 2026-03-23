@@ -1,0 +1,183 @@
+@startuml Manage Products - Pilna Robustness Diagrama
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title UC "Valdyti produktus" - Pilna Robustumo diagrama (pagal Activity Diagram)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' BOUNDARY - UI LANGAI (Kairėje pusėje)
+' ============================================
+package "UI Boundaries (Langai)" {
+  rectangle "HomePage\n(Namų langas)" <<boundary>> as HomePage
+  rectangle "InventoryPage\n(Inventoriaus langas)" <<boundary>> as InventoryPage
+  rectangle "ProductDetailsPage\n(Produkto kortelės langas)" <<boundary>> as ProductDetailsPage
+  rectangle "AddProductPage\n(Produkto pridėjimo langas)" <<boundary>> as AddProductPage
+  rectangle "ReceiptAndBudgetPage\n(Kvito ir biudžeto langas)" <<boundary>> as ReceiptBudgetPage
+  rectangle "DealsPage\n(Akcijų langas)" <<boundary>> as DealsPage
+  rectangle "PermissionDialog\n(Leidimo suteikimo langas)" <<boundary>> as PermissionDialog
+}
+
+' ============================================
+' BOUNDARY - SERVISŲ ADAPTERIAI (Dešinėje pusėje)
+' ============================================
+package "Service Boundaries (Išorinės sistemos)" {
+  rectangle "CameraGalleryBoundary\n(Kamera / Galerija)" <<boundary>> as CameraGalleryBoundary
+  rectangle "OcrServiceBoundary\n(ML Kit OCR)" <<boundary>> as OcrServiceBoundary
+  rectangle "GeminiServiceBoundary\n(Gemini API)" <<boundary>> as GeminiServiceBoundary
+  rectangle "OpenFoodFactsServiceBoundary\n(Open Food Facts API)" <<boundary>> as OpenFoodFactsBoundary
+}
+
+' ============================================
+' CONTROL OBJEKTAI (Viduryje)
+' ============================================
+package "Control (Verslo logika)" {
+  rectangle "RouterController\n(Navigacija tarp langų)" <<control>> as RouterController
+  rectangle "InventoryController\n(Inventoriaus sąrašas)" <<control>> as InventoryController
+  rectangle "ProductController\n(Vieno produkto operacijos)" <<control>> as ProductController
+  rectangle "ProductScanController\n(Skenavimo pipeline)" <<control>> as ProductScanController
+  rectangle "ReceiptBudgetController\n(Kvitas ir biudžetas)" <<control>> as ReceiptBudgetController
+  rectangle "DealsController\n(Akcijų paieška)" <<control>> as DealsController
+}
+
+' ============================================
+' ENTITY OBJEKTAI (Dešinėje, po servisais)
+' ============================================
+package "Entity (Duomenys)" {
+  rectangle "Inventory\n(Inventorius)" <<entity>> as InventoryEntity
+  rectangle "Product\n(Produktas)" <<entity>> as ProductEntity
+  rectangle "Receipt\n(Kvitas)" <<entity>> as ReceiptEntity
+  rectangle "ReceiptLine\n(Kvito eilutė)" <<entity>> as ReceiptLineEntity
+  rectangle "Budget\n(Biudžetas)" <<entity>> as BudgetEntity
+  rectangle "Deal\n(Akcija)" <<entity>> as DealEntity
+  rectangle "Store\n(Parduotuvė)" <<entity>> as StoreEntity
+  rectangle "NutritionInfo\n(Maistinė informacija)" <<entity>> as NutritionEntity
+}
+
+' ============================================
+' RYŠIAI: Aktorius -> UI Boundaries
+' ============================================
+User --> HomePage
+User --> InventoryPage
+User --> ProductDetailsPage
+User --> AddProductPage
+User --> ReceiptBudgetPage
+User --> DealsPage
+User --> PermissionDialog
+
+' ============================================
+' RYŠIAI: Navigacija per RouterController
+' ============================================
+HomePage --> RouterController : "Pasirinkti Inventorius"
+RouterController --> InventoryPage
+
+HomePage --> RouterController : "Skenuoti čekį"
+RouterController --> ReceiptBudgetPage
+
+HomePage --> RouterController : "Peržiūrėti akcijas"
+RouterController --> DealsPage
+
+InventoryPage --> RouterController : "Pridėti produktą"
+RouterController --> AddProductPage
+
+InventoryPage --> ProductController : "Pasirinkti produktą"
+ProductController --> ProductEntity : "Gauti produkto duomenis"
+ProductController --> RouterController : "Atidaryti produkto kortelę"
+RouterController --> ProductDetailsPage
+
+ProductDetailsPage --> RouterController : "Peržiūrėti akcijas"
+RouterController --> DealsPage
+
+' ============================================
+' RYŠIAI: Inventoriaus peržiūra
+' ============================================
+InventoryPage --> InventoryController : "Užkrauti inventorių"
+InventoryController --> InventoryEntity : "Gauti produktų sąrašą"
+InventoryController --> ProductEntity
+
+' ============================================
+' RYŠIAI: Produkto operacijos
+' ============================================
+ProductDetailsPage --> ProductController : "Redaguoti / Ištrinti"
+AddProductPage --> ProductController : "Išsaugoti produktą"
+ProductController --> ProductEntity : "Atnaujinti / Sukurti"
+ProductController --> InventoryEntity : "Atnaujinti inventorių"
+ProductController --> RouterController : "Grįžti į inventorių"
+RouterController --> InventoryPage
+
+' ============================================
+' RYŠIAI: Skenavimo pipeline (Produktas)
+' ============================================
+AddProductPage --> ProductScanController : "Skenuoti produkta"
+
+' ProductScanController -> Permission & Camera
+ProductScanController --> PermissionDialog : "Tikrinti leidimą"
+ProductScanController --> CameraGalleryBoundary : "Gauti nuotrauką / Skaityti barkodą"
+
+' ProductScanController -> OCR, Gemini, OFF
+ProductScanController --> OcrServiceBoundary : "Paleisti OCR procesą"
+ProductScanController --> GeminiServiceBoundary : "Analizuoti nuotrauką/tekstą"
+ProductScanController --> OpenFoodFactsBoundary : "Ieškoti produkto duomenų"
+
+' ProductScanController -> Entities
+ProductScanController --> ProductEntity : "Sukurti produktų objektus"
+ProductScanController --> NutritionEntity : "Sukurti maistinę info"
+
+' ProductScanController -> Kitų controllerių
+ProductScanController --> ProductController : "Grąžinti atpažintą produktą"
+
+' ============================================
+' RYŠIAI: Kvitas ir biudžetas
+' ============================================
+ReceiptBudgetPage --> ReceiptBudgetController : "Skenuoti čekį"
+ReceiptBudgetController --> CameraGalleryBoundary : "Gauti nuotrauką"
+ReceiptBudgetController --> ProductScanController : "Apdoroti kvito nuotrauką"
+ProductScanController --> ReceiptLineEntity : "Sukurti kvito eilutes"
+ProductScanController --> ReceiptBudgetController : "Grąžinti kvito produktus"
+ReceiptBudgetPage --> ReceiptBudgetController : "Patvirtinti čekį"
+ReceiptBudgetController --> ReceiptEntity : "Sukurti/Atnaujinti kvitą"
+ReceiptBudgetController --> ReceiptLineEntity : "Sukurti kvito eilutes"
+ReceiptBudgetController --> InventoryEntity : "Atnaujinti inventorių"
+ReceiptBudgetController --> BudgetEntity : "Atnaujinti biudžetą"
+
+' ============================================
+' RYŠIAI: Akcijų paieška
+' ============================================
+ProductDetailsPage --> RouterController : "Peržiūrėti akcijas"
+RouterController --> DealsPage
+DealsPage --> DealsController : "Ieškoti akcijų"
+DealsController --> ProductEntity : "Gauti produkto info"
+DealsController --> DealEntity : "Rasti akcijas"
+DealsController --> StoreEntity : "Rasti parduotuves"
+
+' ============================================
+' RYŠIAI: Inventory sudarytas iš Product
+' ============================================
+InventoryEntity *-- "0..*" ProductEntity : "sudarytas iš"
+
+' ============================================
+' RYŠIAI: Receipt sudarytas iš ReceiptLine
+' ============================================
+ReceiptEntity *-- "0..*" ReceiptLineEntity : "sudarytas iš"
+
+' ============================================
+' RYŠIAI: ReceiptLine susijęs su Product
+' ============================================
+ReceiptLineEntity --> ProductEntity : "susietas su"
+
+' ============================================
+' RYŠIAI: Deal susijęs su Product ir Store
+' ============================================
+DealEntity --> ProductEntity : "susietas su"
+DealEntity --> StoreEntity : "susietas su"
+
+@enduml
+

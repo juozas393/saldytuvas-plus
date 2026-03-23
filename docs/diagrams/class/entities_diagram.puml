@@ -1,0 +1,103 @@
+@startuml Entities - Saldytuvas Plus
+!theme plain
+skinparam classAttributeIconSize 0
+
+title Entities - Saldytuvas Plus
+
+' ============================================
+' TIK TŪŠČIOS ENTITY KLASĖS SU OPERACIJOMIS
+' ============================================
+
+class Deal {
+  + createDeal(dealData)
+  + getDeal(dealID)
+  + updateDeal(dealID, dealData)
+  + deleteDeal(dealID)
+  + getDealsByStore(storeID)
+  + getDealsByCategory(categoryID)
+  + searchDeals(query)
+  + filterDeals(categoryID, storeID)
+}
+
+class Category {
+  + createCategory(categoryData)
+  + getCategory(categoryID)
+  + updateCategory(categoryID, categoryData)
+  + deleteCategory(categoryID)
+  + getAllCategories()
+  + getCategoryByName(name)
+}
+
+class PromoFlyer {
+  + createPromoFlyer(flyerData)
+  + getPromoFlyer(flyerID)
+  + updatePromoFlyer(flyerID, flyerData)
+  + deletePromoFlyer(flyerID)
+  + getPromoFlyersByStore(storeID)
+  + getActivePromoFlyers()
+}
+
+class User {
+  + createUser(userData)
+  + getUser(userID)
+  + updateUser(userID, userData)
+  + deleteUser(userID)
+  + getUserByEmail(email)
+  + authenticateUser(email, password)
+  + updatePassword(userID, newPassword)
+}
+
+class Notification {
+  + createNotification(notificationData)
+  + getNotification(notificationID)
+  + updateNotification(notificationID, notificationData)
+  + deleteNotification(notificationID)
+  + getNotificationsByUser(userID)
+  + markAsRead(notificationID)
+  + markAsUnread(notificationID)
+  + getUnreadNotifications(userID)
+}
+
+class Store {
+  + createStore(storeData)
+  + getStore(storeID)
+  + updateStore(storeID, storeData)
+  + deleteStore(storeID)
+  + getAllStores()
+  + getStoreByName(name)
+  + getStoresByPriority(priority)
+}
+
+class Recipe {
+  + createRecipe(recipeData)
+  + getRecipe(recipeID)
+  + updateRecipe(recipeID, recipeData)
+  + deleteRecipe(recipeID)
+  + getRecipesByDish(dishID)
+  + addIngredient(recipeID, ingredient)
+  + removeIngredient(recipeID, ingredientID)
+  + getIngredients(recipeID)
+}
+
+class Environment {
+  + createEnvironment(envData)
+  + getEnvironment(envID)
+  + updateEnvironment(envID, envData)
+  + deleteEnvironment(envID)
+  + getEnvironmentByFamily(familyID)
+  + setEnvironmentSettings(envID, settings)
+}
+
+class Administrator {
+  + createAdministrator(adminData)
+  + getAdministrator(adminID)
+  + updateAdministrator(adminID, adminData)
+  + deleteAdministrator(adminID)
+  + getAdministratorByFamily(familyID)
+  + setPermissions(adminID, permissions)
+  + manageFamilyMembers(familyID)
+  + manageBudget(familyID)
+  + manageFoodRules(familyID)
+}
+
+@enduml

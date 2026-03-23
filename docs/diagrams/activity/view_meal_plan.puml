@@ -1,0 +1,49 @@
+@startuml View Meal Plan Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+
+title Peržiūrėti mitybos planą - Activity Diagram
+
+|#FFE0B2|Šeimos narys|
+start
+:Atidaryti mitybos planavimo puslapį;
+
+|#C8E6C9|Posistemis|
+:Patikrinti ar yra esamas planas\n(dienų skaičius, data);
+
+note right: ============================================\nŠAKA: Ar yra esamas planas?\n============================================
+
+if (Yra esamas planas?) then (Taip)
+  |#E1BEE7|Supabase DB\n(meal_plans)|
+  :Gauti mitybos plano duomenis:\nSELECT * FROM meal_plans\nWHERE user_id = ?\nAND plan_start_date <= CURRENT_DATE\nAND plan_end_date >= CURRENT_DATE;
+  
+  |#C8E6C9|Posistemis|
+  :Apdoroti plano duomenis:\n- Dienos struktūra\n- Valgiai per dieną\n- Kalorijų kiekis\n- Ingredientų informacija;
+  
+  |#FFE0B2|Šeimos narys|
+  :Rodyti esamą mitybos planą;
+  
+  note right: ✅ Vartotojas mato:\n• Dienos (Pirmadienis, Antradienis...)\n• Valgiai per dieną\n  - Pusryčiai\n  - Pietūs\n  - Vakarienė\n• Kalorijų kiekis per valgį\n• Confidence indikatoriai\n• Ingredientų sutapimas %
+  
+  :Peržiūrėti planą:\n- Scroll per dienas\n- Išplėsti valgio detales\n- Peržiūrėti ingredientus;
+  
+  note right: Vartotojas gali:\n• Scroll per visą planą\n• Išplėsti valgio kortelę\n• Matyti ingredientų sąrašą\n• Matyti kalorijų skaičių
+  
+else (Ne)
+  note right: SCENARIJUS: Nėra esamo plano
+  |#FFE0B2|Šeimos narys|
+  :Rodyti tuščią būseną\narba "Generuoti naują planą" mygtuką;
+  
+  note right: ✅ Vartotojas mato:\n• Tuščią planą\n• Mygtuką "Generuoti planą"\n• Informacinį pranešimą
+endif
+
+|#FFE0B2|Šeimos narys|
+:Užbaigti peržiūrą;
+
+stop
+
+@enduml

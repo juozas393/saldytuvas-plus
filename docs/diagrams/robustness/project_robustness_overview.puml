@@ -1,0 +1,216 @@
+@startuml Project Robustness Overview
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Projekto robustumo diagrama - Bendras vaizdas
+
+' ============================================
+' AKTORIAI (Vartotojai / Išorinės sistemos)
+' ============================================
+actor "Šeimos narys" as User
+actor "Cron / Scheduler" as Scheduler
+
+' ============================================
+' BOUNDARY OBJEKTAI (Sistemos ribos)
+' ============================================
+
+package "Išorinės sistemos" {
+  rectangle "Supabase API\n(DB prieiga)" <<boundary>> as SupabaseBoundary
+  rectangle "Gemini API\n(AI atpažinimas)" <<boundary>> as GeminiBoundary
+  rectangle "Spoonacular API\n(Receptų paieška)" <<boundary>> as SpoonacularBoundary
+  rectangle "Open Food Facts API\n(Produktų duomenys)" <<boundary>> as OpenFoodFactsBoundary
+  rectangle "Parduotuvės svetainės\n(Maxima, Lidl, IKI, Rimi)" <<boundary>> as StoreWebsitesBoundary
+  rectangle "Tesseract OCR\n(Tekstų atpažinimas)" <<boundary>> as TesseractBoundary
+  rectangle "ML Kit OCR\n(Google OCR)" <<boundary>> as MLKitBoundary
+  rectangle "Mobile Scanner\n(Barcode skaitymas)" <<boundary>> as BarcodeScannerBoundary
+  rectangle "Image Picker\n(Kamera / Galerija)" <<boundary>> as ImagePickerBoundary
+}
+
+' ============================================
+' CONTROLLER OBJEKTAI (Verslo logika)
+' ============================================
+
+package "BLoC Controllers (State Management)" {
+  rectangle "InventoryBloc\n(Inventoriaus valdymas)" <<control>> as InventoryBloc
+  rectangle "MealPlannerBloc\n(Mitybos planavimas)" <<control>> as MealPlannerBloc
+  rectangle "ShoppingListBloc\n(Pirkinių sąrašas)" <<control>> as ShoppingListBloc
+  rectangle "ReceiptBloc\n(Čekių valdymas)" <<control>> as ReceiptBloc
+  rectangle "ScanBloc\n(Skanavimo valdymas)" <<control>> as ScanBloc
+  rectangle "PromotionsBloc\n(Akcijų valdymas)" <<control>> as PromotionsBloc
+}
+
+package "Services (Business Logic)" {
+  rectangle "MealPlanningService\n(Gemini + Spoonacular)" <<control>> as MealPlanningService
+  rectangle "FoodRecognitionService\n(Maisto atpažinimas)" <<control>> as FoodRecognitionService
+  rectangle "ReceiptParsingService\n(Čekių parsavimas)" <<control>> as ReceiptParsingService
+  rectangle "ImageProcessingService\n(Nuotraukų apdorojimas)" <<control>> as ImageProcessingService
+  rectangle "OCRService\n(OCR apdorojimas)" <<control>> as OCRService
+  rectangle "BarcodeScannerService\n(Barcode skaitymas)" <<control>> as BarcodeScannerService
+  rectangle "NutritionService\n(Maistinės vertės skaičiavimas)" <<control>> as NutritionService
+  rectangle "HealthScoreService\n(Sveikumo įvertinimas)" <<control>> as HealthScoreService
+  rectangle "ShoppingListService\n(Pirkinių sąrašo generavimas)" <<control>> as ShoppingListService
+  rectangle "DealsUpdateJob\n(Akcijų atnaujinimas)" <<control>> as DealsUpdateJob
+  rectangle "DealsScraperService\n(Playwright scraping)" <<control>> as DealsScraperService
+  rectangle "DealsNormalizer\n(Duomenų normalizavimas)" <<control>> as DealsNormalizer
+  rectangle "ProductMatchingService\n(RapidFuzz matching)" <<control>> as ProductMatchingService
+}
+
+' ============================================
+' ENTITY OBJEKTAI (Duomenų modeliai)
+' ============================================
+
+package "Domain Models" {
+  rectangle "Product\n(Produkto modelis)" <<entity>> as ProductEntity
+  rectangle "InventoryItem\n(Inventoriaus elementas)" <<entity>> as InventoryItemEntity
+  rectangle "Meal\n(Valgio modelis)" <<entity>> as MealEntity
+  rectangle "MealPlan\n(Mitybos planas)" <<entity>> as MealPlanEntity
+  rectangle "ShoppingListItem\n(Pirkinių sąrašo elementas)" <<entity>> as ShoppingListItemEntity
+  rectangle "Receipt\n(Čekio modelis)" <<entity>> as ReceiptEntity
+  rectangle "Deal\n(Akcijos modelis)" <<entity>> as DealEntity
+  rectangle "NutritionInfo\n(Maistinė vertė)" <<entity>> as NutritionInfoEntity
+  rectangle "HealthScore\n(Sveikumo įvertinys)" <<entity>> as HealthScoreEntity
+}
+
+' ============================================
+' VIEW OBJEKTAI (UI)
+' ============================================
+
+package "Pages (Screens)" {
+  rectangle "InventoryPage\n(Inventoriaus ekranas)" <<view>> as InventoryPage
+  rectangle "MealPlannerPage\n(Mitybos planavimo ekranas)" <<view>> as MealPlannerPage
+  rectangle "ShoppingListPage\n(Pirkinių sąrašo ekranas)" <<view>> as ShoppingListPage
+  rectangle "ScanPage\n(Skanavimo ekranas)" <<view>> as ScanPage
+  rectangle "ReceiptsPage\n(Čekių ekranas)" <<view>> as ReceiptsPage
+  rectangle "PromotionsPage\n(Akcijų ekranas)" <<view>> as PromotionsPage
+}
+
+' ============================================
+' RYŠIAI - Vartotojo sąveika
+' ============================================
+
+User --> InventoryPage : peržiūrėti\ninventorių
+User --> ScanPage : atpažinti maistą\niš nuotraukos
+User --> ReceiptsPage : nuskaityti čekį
+User --> MealPlannerPage : valdyti mitybos planą
+User --> ShoppingListPage : peržiūrėti\npirkinių sąrašą
+User --> PromotionsPage : peržiūrėti akcijas
+
+' ============================================
+' RYŠIAI - BLoC → Services
+' ============================================
+
+InventoryBloc --> FoodRecognitionService : atpažinti maistą
+InventoryBloc --> BarcodeScannerService : nuskaityti barcode
+ScanBloc --> ImageProcessingService : apdoroti nuotrauką
+ScanBloc --> OCRService : atpažinti tekstą
+ScanBloc --> FoodRecognitionService : atpažinti maistą
+ReceiptBloc --> ReceiptParsingService : parsinti čekį
+MealPlannerBloc --> MealPlanningService : generuoti planą
+ShoppingListBloc --> ShoppingListService : generuoti sąrašą
+PromotionsBloc --> DealsUpdateJob : atnaujinti akcijas
+
+' ============================================
+' RYŠIAI - Services → Boundaries
+' ============================================
+
+FoodRecognitionService --> ImagePickerBoundary : gauti nuotrauką
+FoodRecognitionService --> GeminiBoundary : atpažinti maistą
+FoodRecognitionService --> OCRService : gauti tekstą
+OCRService --> TesseractBoundary : atpažinti tekstą
+OCRService --> MLKitBoundary : atpažinti tekstą
+BarcodeScannerService --> BarcodeScannerBoundary : nuskaityti barcode
+BarcodeScannerService --> OpenFoodFactsBoundary : gauti produkto duomenis
+ReceiptParsingService --> GeminiBoundary : parsinti čekį
+MealPlanningService --> GeminiBoundary : generuoti meal-intent
+MealPlanningService --> SpoonacularBoundary : gauti receptus
+DealsScraperService --> StoreWebsitesBoundary : scraping akcijų
+ProductMatchingService --> SupabaseBoundary : gauti produktų sąrašą
+
+' ============================================
+' RYŠIAI - Services → Entities
+' ============================================
+
+FoodRecognitionService --> ProductEntity : sukurti produktą
+FoodRecognitionService --> NutritionInfoEntity : maistinė vertė
+FoodRecognitionService --> HealthScoreService : sveikumo įvertinys
+HealthScoreService --> HealthScoreEntity : sukurti įvertinį
+NutritionService --> NutritionInfoEntity : normalizuoti / skaičiuoti
+MealPlanningService --> MealPlanEntity : sukurti planą
+MealPlanningService --> MealEntity : sukurti valgius
+ShoppingListService --> ShoppingListItemEntity : sukurti sąrašą
+DealsScraperService --> DealEntity : sukurti akcijas
+ProductMatchingService --> ProductEntity : priskirti product_id
+
+' ============================================
+' RYŠIAI - Services → Supabase
+' ============================================
+
+InventoryBloc --> SupabaseBoundary : CRUD inventoriaus
+MealPlannerBloc --> SupabaseBoundary : CRUD mitybos planų
+ShoppingListBloc --> SupabaseBoundary : CRUD pirkinių sąrašų
+ReceiptBloc --> SupabaseBoundary : CRUD čekių
+PromotionsBloc --> SupabaseBoundary : CRUD akcijų
+DealsUpdateJob --> SupabaseBoundary : UPSERT akcijų
+
+' ============================================
+' RYŠIAI - Cron / Scheduler
+' ============================================
+
+Scheduler --> DealsUpdateJob : paleisti akcijų\natnaujinimą
+
+' ============================================
+' RYŠIAI - Pages → BLoC
+' ============================================
+
+InventoryPage --> InventoryBloc : veiksmai
+MealPlannerPage --> MealPlannerBloc : veiksmai
+ShoppingListPage --> ShoppingListBloc : veiksmai
+ScanPage --> ScanBloc : veiksmai
+ReceiptsPage --> ReceiptBloc : veiksmai
+PromotionsPage --> PromotionsBloc : veiksmai
+
+' ============================================
+' RYŠIAI - BLoC → Entities
+' ============================================
+
+InventoryBloc --> InventoryItemEntity : valdyti inventorių
+MealPlannerBloc --> MealPlanEntity : valdyti planus
+ShoppingListBloc --> ShoppingListItemEntity : valdyti sąrašus
+ReceiptBloc --> ReceiptEntity : valdyti čekius
+PromotionsBloc --> DealEntity : valdyti akcijas
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

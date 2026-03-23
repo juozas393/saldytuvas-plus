@@ -1,0 +1,210 @@
+@startuml Recognize and Update Meal - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Valdyti patiekalą: Atpažinti maistą iš nuotraukos ir atnaujinti patiekalą
+
+actor "Šeimos\nnarys" as User
+participant "MealPlanningPage\n<<screen>>" as Page
+participant "MealPlanningController\n<<control>>" as Controller
+participant "CameraGalleryBoundary\n<<boundary>>" as Camera
+participant "ImageProcessingService" as ImageService
+participant "GeminiServiceBoundary\n<<boundary>>" as Gemini
+participant "ProductEntity\n<<entity>>" as Product
+participant "DishEntity\n<<entity>>" as Dish
+participant "MealPlanningService" as MealService
+participant "SupabaseClient\n(Core.Network)" as Supabase
+database "Supabase DB\n(meal_plans)" as Database
+
+== SCENARIJUS: Vartotojas redaguoja patiekalą ir atpažįsta maistą ==
+
+User -> Page: Atidaro MealPlanningPage\n(šiandienos valgiai)
+activate Page
+
+Page -> Controller: LoadMealPlanEvent(date: today)
+activate Controller
+
+note right of Controller: **BE REPOSITORY:**\nController tiesiogiai naudoja\nSupabaseClient
+
+Controller -> Supabase: from('meal_plans')\n  .select()\n  .eq('user_id', userId)\n  .eq('date', date)
+activate Supabase
+Supabase -> Database: SELECT * FROM meal_plans\nWHERE user_id = ? AND date = ?
+activate Database
+Database --> Supabase: JSON data
+deactivate Database
+Supabase --> Controller: List<Map<String, dynamic>>
+deactivate Supabase
+
+Controller -> Controller: mapToMealPlanEntity(data)
+
+Controller --> Page: MealPlanLoadedState(meals: [...])
+deactivate Controller
+
+Page -> User: Rodo šiandienos valgius:\n- Pusryčiai\n- Pietūs\n- Vakarienė
+deactivate Page
+
+note right of User: Vartotojas mato planuotą valgį\n(pvz., "Pietūs: Blynai")
+
+User -> Page: Paspaudžia "Redaguoti" ant valgio
+activate Page
+
+Page -> Controller: EditMealEvent(mealId, mealType)
+activate Controller
+
+Controller -> Supabase: from('meals')\n  .select()\n  .eq('id', mealId)\n  .single()
+activate Supabase
+Supabase -> Database: SELECT * FROM meals WHERE id = ?
+activate Database
+Database --> Supabase: JSON data
+deactivate Database
+Supabase --> Controller: Map<String, dynamic>
+deactivate Supabase
+
+Controller -> Controller: mapToMealEntity(data)
+
+Controller --> Page: MealEditState(meal: currentMeal)
+deactivate Controller
+
+Page -> User: Rodo redagavimo formą:\n- Pavadinimas: "Blynai"\n- Ingredientai\n- [Redaguoti ranka]\n- [Atpažinti maistą] ←
+deactivate Page
+
+User -> Page: Paspaudžia "Atpažinti maistą"
+activate Page
+
+== Nuotraukos pasirinkimas ==
+
+Page -> Camera: requestImage()\n(source: gallery or camera)
+activate Camera
+
+Camera -> User: Rodo pasirinkimą:\n📷 Kamera arba 🖼️ Galerija
+User -> Camera: Pasirenka nuotrauką
+
+alt Nuotraukos pasirinkimas sėkmingas
+    Camera --> Page: File (image file)
+    deactivate Camera
+    
+    Page -> Controller: RecognizeFoodEvent(image: File)
+    activate Controller
+    
+    Page --> User: Rodo "Apdorojama..." indikatorių
+    deactivate Page
+    
+    == Vaizdo apdorojimas ==
+    
+    Controller -> ImageService: processImage(image)
+    activate ImageService
+    
+    ImageService -> ImageService: Patikrinti formatą\n(JPEG, PNG)
+    
+    alt Nuotraukos dydis per didelis (>20MB)
+        ImageService -> ImageService: Resize ir compress\n(neišmetant spalvų)
+    endif
+    
+    ImageService -> ImageService: Konvertuoti į base64\n(formatą API)
+    
+    ImageService --> Controller: ProcessedImage(base64, metadata)
+    deactivate ImageService
+    
+    == Maisto atpažinimas per Gemini API ==
+    
+    Controller -> Gemini: recognizeFood(image: base64)
+    activate Gemini
+    
+    note right of Gemini: **Gemini API Request:**\n- Image base64\n- Prompt: "Identify food in image"\n- Return: product name, category,\n  nutrition info (per 100g/ml)
+    
+    Gemini -> Gemini: **API Call**\nPOST https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision
+    
+    Gemini --> Controller: FoodRecognitionResult(\n  name: "Blynai su kiauliena",\n  category: "Breakfast",\n  products: [\n    {name: "Kiauliena", weight: "50g"},\n    {name: "Blynai", weight: "200g"}\n  ],\n  nutrition: {calories: 450, ...},\n  confidence: 0.85\n)
+    deactivate Gemini
+    
+    == Produktų identifikavimas ==
+    
+    Controller -> Product: findProductByName("Kiauliena")
+    activate Product
+    
+Controller -> Supabase: from('products')\n  .select()\n  .ilike('name', '%Kiauliena%')\n  .limit(1)
+activate Supabase
+Supabase -> Database: SELECT * FROM products\nWHERE name ILIKE '%Kiauliena%'
+activate Database
+Database --> Supabase: JSON data
+deactivate Database
+Supabase --> Controller: List<Map<String, dynamic>>
+deactivate Supabase
+
+Controller -> Controller: mapToProductEntity(data.firstOrNull)
+    
+    Product --> Controller: ProductEntity (arba null)
+    deactivate Product
+    
+    note right of Controller: Jei produktas nerastas →\nsukurti naują ProductEntity\nsu Gemini duomenimis
+    
+    == Dish (patiekalo) sukūrimas/atnaujinimas ==
+    
+    Controller -> Dish: createFromRecognition(\n  recognitionResult,\n  existingMealId\n)
+    activate Dish
+    
+    Dish -> Dish: **Sukurti/Atnaujinti DishEntity:**\n- name: "Blynai su kiauliena"\n- products: [ProductEntity...]\n- nutrition: {...}\n- mealType: existingMeal.mealType\n- date: today
+    
+    Dish --> Controller: DishEntity (atnaujintas)
+    deactivate Dish
+    
+    == Meal Plan atnaujinimas duomenų bazėje ==
+    
+Controller -> Controller: convertDishToJson(newDish)
+
+Controller -> Supabase: from('meal_plans')\n  .update({'meals': updatedMealsJson})\n  .eq('id', mealPlanId)
+activate Supabase
+
+Supabase -> Database: UPDATE meal_plans\nSET meals = jsonb_set(meals, '{meal_id}', ?)\nWHERE id = ?
+activate Database
+Database --> Supabase: Success
+deactivate Database
+
+Supabase --> Controller: Updated JSON
+deactivate Supabase
+
+Controller -> Controller: mapToMealPlanEntity(updatedData)
+    
+    Controller --> Page: MealUpdatedState(\n  meal: updatedDish,\n  message: "Patiekalas atnaujintas!"\n)
+    deactivate Controller
+    
+    Page -> User: Rodo sėkmės pranešimą:\n✅ "Patiekalas atnaujintas!\nIš nuotraukos atpažinta:\n• Blynai su kiauliena\n• 450 kcal"
+    deactivate Page
+    
+    User -> Page: Mato atnaujintą patiekalą
+    activate Page
+    Page --> User: Rodo naują valgį su atpažintais produktais
+    deactivate Page
+
+else Nuotraukos pasirinkimas neįvyko (atšaukta)
+    Camera --> Page: null (cancelled)
+    deactivate Camera
+    
+    Page --> User: Atšaukta (nei vieno veiksmo)
+    deactivate Page
+endif
+
+== ALTERNATYVUS SCENARIJUS: Klaida atpažinant ==
+
+alt Gemini API klaida arba nėra produkto nuotraukoje
+    Gemini --> Controller: FoodRecognitionError(\n  message: "Nepavyko atpažinti maisto"\n)
+    
+    Controller --> Page: MealRecognitionErrorState(\n  error: "Nepavyko atpažinti maisto.\nBandykite dar kartą arba įveskite ranka."\n)
+    
+    Page -> User: Rodo klaidos pranešimą:\n❌ "Nepavyko atpažinti maisto"\n+ [Bandyti dar kartą]\n+ [Įvesti ranka]
+    deactivate Page
+endif
+
+note over User, Database
+  **SVARBU:**
+  - Vartotojas redaguoja PATIEKALĄ (meal), kurį šiandien valgė
+  - Vietoj rankinio redagavimo, naudoja maisto atpažinimą
+  - Sistema atpažįsta produktus iš nuotraukos ir atnaujina meal planą
+  - Meal plan atnaujinamas duomenų bazėje (Supabase)
+end note
+
+@enduml
+

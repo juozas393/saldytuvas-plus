@@ -1,0 +1,216 @@
+@startuml Shopping List Management Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+
+title Valdyti pirkinių sąrašą - Activity Diagram
+
+|#FFE0B2|Šeimos narys|
+start
+
+|#C8E6C9|Šeimos administravimo posistemis|
+
+partition "1. ETAPAS: Puslapio atidarymas" {
+  |#FFE0B2|Šeimos narys|
+  :Paspausti mygtuką\n"Pirkinių sąrašas";
+  
+  |#C8E6C9|Posistemis|
+  :Atidaryti pirkinių sąrašo puslapį;
+}
+
+partition "2. ETAPAS: Pirkinių sąrašo inicializavimas" {
+  :Gauti VIENĄ pirkinių sąrašą iš DB\nSELECT * FROM shopping_lists\nWHERE user_id = ?\nLIMIT 1;
+  
+  if (Sąrašas rastas DB?) then (Taip)
+    note right: SCENARIJUS A:\nSąrašas egzistuoja
+    :Pateikti esamą pirkinių sąrašą;
+    :Gauti shopping_list_id;
+  else (Ne)
+    note right: SCENARIJUS B:\nSąrašas neegzistuoja
+    :Sukurti naują shopping_list DB\nINSERT INTO shopping_lists (user_id, created_at)\nVALUES (?, NOW());
+    :Gauti shopping_list_id;
+  endif
+  
+  note right: ============================================\nMERGE: Abu variantai susilieja\n============================================
+  
+  :Gauti produktus iš sąrašo DB\nSELECT * FROM shopping_list_items\nWHERE shopping_list_id = ?\nORDER BY priority, category;
+  
+  :Gauti receptus su ingredientais iš DB\nSELECT * FROM meal_plans\nWHERE user_id = ? AND plan_end_date >= NOW();
+  
+  :Paruošti duomenis UI:\n- Produktų sąrašas (gali būti tuščias)\n- Receptų sąrašas (gali būti tuščias);
+}
+
+partition "3. ETAPAS: Lango rodymas vartotojui" {
+  |#FFE0B2|Šeimos narys|
+  :Rodyti pirkinių sąrašą:\n- Sekcija "Šią savaitę reikės"\n  (produktai su checkbox'ais)\n- Sekcija "Pagal receptus"\n  (receptai su ingredientais);
+}
+
+note right: ============================================\n4. ETAPAS: Vartotojo veiksmų ciklas\n============================================
+note right: ✅ Langas atidarytas\nVartotojas gali:\n• Pridėti produktą ranka\n• Pridėti iš mitybos plan trūkstamus produktus\n• Redaguoti produktą\n• Pašalinti produktą\n• Pažymėti/nepažymėti (checkbox)\n• Perkelti ingredientą iš recepto\n• Išvalyti sekciją
+
+repeat
+  |#FFE0B2|Šeimos narys|
+  :Peržiūrėti pirkinių sąrašą;
+  
+  note right: ============================================\nŠAKA: Ką vartotojas nori daryti?\n============================================
+  
+  if ([nori pridėti produktą rankiniu būdu]?) then (Taip)
+    note right: VEIKSMAS 1:\nPridėti naują produktą ranka
+    |#C8E6C9|Posistemis|
+    :Atidaryti produkto pridėjimo formą;
+    
+    |#FFE0B2|Šeimos narys|
+    :Suvesti produkto informaciją:\n- Pavadinimas (label)\n- Kategorija (category)\n- Kiekis (quantity)\n- Prioritetas (optional);
+    
+    |#C8E6C9|Posistemis|
+    :Validuoti duomenis\n(required: label, quantity);
+    :Normalizuoti kiekio formatą\n(trim, lowercase);
+    
+    :Ieškoti panašių produktų DB\nSELECT * FROM shopping_list_items\nWHERE shopping_list_id = ?\nAND (name ILIKE '%...%' OR category = ?);
+    
+    if (Rastas panašus produktas?) then (Taip)
+      note right: Dublikatas rastas → sujungti
+      :Sujungti produktus:\n- Sumuoti kiekius\n- Laikyti aukščiausią prioritetą;
+      :Atnaujinti esamą įrašą DB\nUPDATE shopping_list_items\nSET quantity = quantity + ?,\npriority = GREATEST(...)\nWHERE id = ?;
+    else (Ne)
+      note right: Dublikatas nerastas → pridėti naują
+      :Įrašyti naują produktą į DB\nINSERT INTO shopping_list_items\n(shopping_list_id, name, category, quantity, priority)\nVALUES (...);
+    endif
+    
+    :Atnaujinti UI\n(pridėti/atnaujinti produktą sąraše);
+    note right: ✅ Produktas pridėtas\n→ Grįžti į ciklą
+    
+  else ([nori pridėti produktus\niš mitybos plan trūkstamus]?) then (Taip)
+    note right: VEIKSMAS 2:\nSinchronizuoti su meal plan
+    |#C8E6C9|Posistemis|
+    :Gauti esamą meal plan iš DB\nsu receptais ir ingredientais;
+    :Gauti inventoriaus duomenis iš DB;
+    
+    :Kiekvienam ingredientui iš meal plan:\nKonvertuoti kiekius į standartinius vienetus\n(kg→g, l→ml);
+    :Sukurti tuščią trūkstamų ingredientų sąrašą;
+    
+    repeat
+      :Paimti kitą ingredientą iš meal plan;
+      :Rasti ingredientą inventoriuje\n(pagal pavadinimą/barcode/kategoriją);
+      
+      if (Ingredientas rastas inventoriuje?) then (Taip)
+        :Gauti turimą kiekį inventoriuje\nir galiojimo datą;
+        :Skaičiuoti prioritetą:\ndays ≤ 3 → critical,\ndays ≤ 7 → soon,\ndays > 7 → optional;
+        :Skaičiuoti: trūksta = reikia - turima;
+        if (trūksta > 0?) then (Taip)
+          :Pridėti į trūkstamų sąrašą\n(kiekio = trūksta,\nprioritetas = apskaičiuotas);
+        endif
+      else (Ne)
+        :Pridėti į trūkstamų sąrašą\n(kiekio = reikiamas kiekis,\nprioritetas = optional);
+      endif
+    repeat while ([Yra daugiau ingredientų\nperžiūrėti?]?)
+    
+    :Gauti esamus produktus iš shopping list DB;
+    repeat
+      :Kiekvienam trūkstamam ingredientui:\nPatikrinti dublikatą shopping list\n(pagal pavadinimą/kategoriją);
+      
+      if (Rastas panašus produktas?) then (Taip)
+        :Sujungti (sumuoti kiekius,\nlaikyti aukščiausią prioritetą)\nUPDATE shopping_list_items;
+      else (Ne)
+        :Pridėti naują įrašą į DB\nINSERT INTO shopping_list_items;
+      endif
+    repeat while ([Yra daugiau trūkstamų\nperžiūrėti?]?)
+    
+    :Atnaujinti UI\n(perkrauti produktus iš DB);
+    note right: ✅ Sąrašas sinchronizuotas\n→ Grįžti į ciklą
+    
+  else ([nori pataisyti produkto informaciją]?) then (Taip)
+    note right: VEIKSMAS 3:\nRedaguoti produktą
+    |#C8E6C9|Posistemis|
+    :Rodyti veiksmų meniu:\n- Redaguoti\n- Pašalinti;
+    
+    |#FFE0B2|Šeimos narys|
+    :Pasirinkti "Redaguoti";
+    
+    |#C8E6C9|Posistemis|
+    :Atidaryti produkto redagavimo formą\nsu esamais duomenimis;
+    
+    |#FFE0B2|Šeimos narys|
+    :Redaguoti produkto informaciją:\npavadinimas, kategorija, kiekis, prioritetas;
+    
+    |#C8E6C9|Posistemis|
+    :Validuoti duomenis;
+    :Atnaujinti produktą DB\nUPDATE shopping_list_items\nSET name = ?, category = ?,\nquantity = ?, priority = ?\nWHERE id = ?;
+    
+    :Atnaujinti UI\n(produktas atnaujintas sąraše);
+    note right: ✅ Produktas atnaujintas\n→ Grįžti į ciklą
+    
+  else ([nori panaikinti produktą]?) then (Taip)
+    note right: VEIKSMAS 4:\nPašalinti produktą
+    |#C8E6C9|Posistemis|
+    :Rodyti veiksmų meniu:\n- Redaguoti\n- Pašalinti;
+    
+    |#FFE0B2|Šeimos narys|
+    :Pasirinkti "Pašalinti";
+    
+    |#C8E6C9|Posistemis|
+    :Rodyti patvirtinimo dialogą:\n"Ar tikrai norite pašalinti\n[pavadinimas]?";
+    
+    |#FFE0B2|Šeimos narys|
+    if ([patvirtino pašalinimą]?) then (Taip)
+      |#C8E6C9|Posistemis|
+      :Pašalinti produktą iš DB\nDELETE FROM shopping_list_items\nWHERE id = ?;
+      
+      :Atnaujinti UI\n(produktas pašalintas iš sąrašo);
+      note right: ✅ Produktas pašalintas\n→ Grįžti į ciklą
+    else (Ne)
+      note right: Vartotojas atšaukė\n→ Grįžti į ciklą be pakeitimų
+    endif
+    
+  else ([nori pažymėti/nepažymėti produktą]?) then (Taip)
+    note right: VEIKSMAS 5:\nCheckbox (pažymėti/nepažymėti)
+    |#C8E6C9|Posistemis|
+    :Atnaujinti UI optimistically\n(checkbox būsena pakeista);
+    
+    :Atnaujinti checkbox būseną DB\nUPDATE shopping_list_items\nSET is_checked = ?\nWHERE id = ?;
+    
+    note right: ✅ Produktas pažymėtas/nepažymėtas\n→ Grįžti į ciklą
+    
+  else ([nori perkelti ingredientą iš recepto]?) then (Taip)
+    note right: VEIKSMAS 6:\nPerkelti ingredientą iš recepto
+    |#C8E6C9|Posistemis|
+    :Gauti konkretų ingredientą\n(concreteIngredient);
+    :Sukurti ShoppingListItem iš ingrediento:\nlabel = ingredient.name\nquantity = ingredient.quantity\ncategory = ingredient.category;
+    
+    :Ieškoti panašių produktų DB\nSELECT * FROM shopping_list_items\nWHERE shopping_list_id = ?\nAND name ILIKE '%...%';
+    
+    if (Rastas panašus produktas?) then (Taip)
+      :Sujungti produktus\n(sumuoti kiekius, aukščiausias prioritetas);
+      :Atnaujinti esamą įrašą DB\nUPDATE shopping_list_items\nSET quantity = quantity + ?\nWHERE id = ?;
+    else (Ne)
+      :Įrašyti naują produktą į DB\nINSERT INTO shopping_list_items\n(shopping_list_id, name, category, quantity, priority)\nVALUES (...);
+    endif
+    
+    :Atnaujinti UI\n(ingredientas pridėtas į sąrašą);
+    note right: ✅ Ingredientas perkeltas į sąrašą\n→ Grįžti į ciklą
+    
+  else ([nori išvalyti sekciją]?) then (Taip)
+    note right: VEIKSMAS 7:\nIšvalyti sekciją
+    |#C8E6C9|Posistemis|
+    :Rodyti patvirtinimo dialogą:\n"Ar tikrai norite išvalyti\n'Šią savaitę reikės' sekciją?";
+    
+    |#FFE0B2|Šeimos narys|
+    if ([patvirtino išvalymą]?) then (Taip)
+      |#C8E6C9|Posistemis|
+      :Ištrinti visus produktus iš DB\nDELETE FROM shopping_list_items\nWHERE shopping_list_id = ?;
+      
+      :Atnaujinti UI\n(sąrašas tuščias);
+      note right: ✅ Sekcija išvalyta\n→ Grįžti į ciklą
+    else (Ne)
+      note right: Vartotojas atšaukė\n→ Grįžti į ciklą be pakeitimų
+    endif
+  endif
+  
+repeat while ([vartotojas DAR NEBALIGIA\ndirbti su sąrašu\nARBA NEUŽDARE puslapio]?)
+
+stop
+
+@enduml

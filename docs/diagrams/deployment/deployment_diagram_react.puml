@@ -1,0 +1,130 @@
+@startuml Saldytuvas Plus - Deployment Diagrama (React/React Native)
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Deployment Diagrama (React/React Native - Production)
+
+' ============================================
+' CLIENT DEVICES (Vartotojo įrenginiai)
+' ============================================
+
+node "Client" <<device>> as Client {
+  artifact "browser" as Browser
+  artifact "PWA" as PWAApp
+  note right of PWAApp
+    Progressive Web App:
+    - React Native Web
+    - Service Worker
+    - Offline support
+    - Installable
+  end note
+}
+
+node "Mobile Device" <<device>> as MobileDevice {
+  artifact "app-release.apk" as AndroidAPK
+  artifact "app-release.ipa" as iOSIPA
+  note right of AndroidAPK
+    React Native:
+    - Expo managed workflow
+    - iOS & Android builds
+    - Shared codebase with web
+  end note
+}
+
+' ============================================
+' CLOUDFLARE (Web Hosting)
+' ============================================
+
+node "Cloudflare Pages" <<executionEnvironment>> as Cloudflare {
+  artifact "build/*.js" as ReactJS
+  artifact "build/*.css" as ReactCSS
+  artifact "build/index.html" as ReactHTML
+  artifact "manifest.json" as PWAManifest
+  artifact "service-worker.js" as ServiceWorker
+  note right of ServiceWorker
+    PWA Support:
+    - Offline caching
+    - Background sync
+    - Installable web app
+  end note
+}
+
+' ============================================
+' SUPABASE CLOUD (Backend + Database)
+' ============================================
+
+node "Supabase Cloud" <<executionEnvironment>> as SupabaseCloud {
+  node "PostgreSQL" <<executionEnvironment>> as PostgresContainer {
+    artifact "fridge.sql" as FridgeSQL
+  }
+  
+  node "Supabase Auth" <<executionEnvironment>> as SupabaseAuth
+  node "Supabase Storage" <<executionEnvironment>> as SupabaseStorage
+}
+
+' ============================================
+' EXTERNAL APIs
+' ============================================
+
+node "Gemini API" <<server>> as GeminiAPI
+node "Spoonacular API" <<server>> as SpoonacularAPI
+node "OpenFoodFacts API" <<server>> as OpenFoodFactsAPI
+node "Svetainės API" <<server>> as SvetainesAPI
+
+' ============================================
+' RYŠIAI: Client → Cloudflare
+' ============================================
+
+Client "*" ..> "1" Cloudflare : HTTPS
+
+' ============================================
+' RYŠIAI: Cloudflare → Supabase Cloud
+' ============================================
+
+Cloudflare "1" ..> "1" SupabaseCloud : HTTPS
+
+' ============================================
+' RYŠIAI: Mobile Device → Supabase Cloud
+' ============================================
+
+MobileDevice "*" ..> "1" SupabaseCloud : HTTPS
+
+' ============================================
+' RYŠIAI: Supabase vidiniai
+' ============================================
+
+SupabaseAuth "1" ..> "1" PostgresContainer : TCP/IP
+SupabaseStorage "1" ..> "1" PostgresContainer : TCP/IP
+
+' ============================================
+' RYŠIAI: Apps → External APIs
+' ============================================
+
+Cloudflare "1" ..> "1" GeminiAPI : HTTPS
+Cloudflare "1" ..> "1" SpoonacularAPI : HTTPS
+Cloudflare "1" ..> "1" OpenFoodFactsAPI : HTTPS
+Cloudflare "1" ..> "*" SvetainesAPI : HTTPS
+
+MobileDevice "*" ..> "1" GeminiAPI : HTTPS
+MobileDevice "*" ..> "1" SpoonacularAPI : HTTPS
+MobileDevice "*" ..> "1" OpenFoodFactsAPI : HTTPS
+MobileDevice "*" ..> "*" SvetainesAPI : HTTPS
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Deployment Node'ų tipai:**
+  - <<device>> : Vartotojo įrenginys
+  - <<executionEnvironment>> : Cloud paslauga
+  - <<server>> : Išorinis API serveris
+  
+  **Ryšiai:**
+  ..> : komunikacija
+  HTTPS : saugus HTTP protokolas
+  TCP/IP : duomenų bazės ryšys
+endlegend
+
+@enduml

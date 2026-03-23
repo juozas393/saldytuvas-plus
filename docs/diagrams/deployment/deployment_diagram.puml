@@ -1,0 +1,105 @@
+@startuml Saldytuvas Plus - Deployment Diagrama
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Deployment Diagrama (Production)
+
+' ============================================
+' CLIENT DEVICES (Vartotojo įrenginiai)
+' ============================================
+
+node "Mobile Device" <<device>> as MobileDevice {
+  artifact "app-release.apk" as AndroidAPK
+  artifact "app-release.ipa" as IOSIPA
+}
+
+' ============================================
+' CLOUD INFRASTRUCTURE
+' ============================================
+
+node "Supabase Cloud" <<executionEnvironment>> as SupabaseCloud {
+  component instance "Supabase Database" <<database>> as SupabaseDB {
+    database "PostgreSQL" as PostgreSQL
+  }
+  
+  component instance "Supabase Auth" <<service>> as SupabaseAuth
+  component instance "Supabase Storage" <<storage>> as SupabaseStorage
+  component instance "Supabase Edge Functions" <<server>> as SupabaseEdge
+  
+  artifact "database.ddl" as DatabaseDdl
+  artifact "migrations/*.sql" as Migrations
+}
+
+node "External APIs" <<executionEnvironment>> as ExternalAPIs {
+  component instance "Gemini API" <<server>> as GeminiAPI
+  component instance "Spoonacular API" <<server>> as SpoonacularAPI
+  component instance "OpenFoodFacts API" <<server>> as OpenFoodFactsAPI
+}
+
+' ============================================
+' RYŠIAI: Client → Cloud
+' ============================================
+
+MobileDevice ..> SupabaseCloud : HTTPS\n<<use>>
+
+SupabaseCloud ..> GeminiAPI : HTTPS\n<<use>>
+SupabaseCloud ..> SpoonacularAPI : HTTPS\n<<use>>
+SupabaseCloud ..> OpenFoodFactsAPI : HTTPS\n<<use>>
+
+MobileDevice ..> GeminiAPI : HTTPS\n<<use>>
+MobileDevice ..> SpoonacularAPI : HTTPS\n<<use>>
+MobileDevice ..> OpenFoodFactsAPI : HTTPS\n<<use>>
+
+' ============================================
+' RYŠIAI: Supabase vidiniai
+' ============================================
+
+SupabaseDB ..> PostgreSQL : uses
+PostgreSQL ..> DatabaseDdl <<manifest>>
+PostgreSQL ..> Migrations <<manifest>>
+
+SupabaseEdge ..> SupabaseDB : uses
+
+AndroidAPK ..> SupabaseCloud : deploys to
+IOSIPA ..> SupabaseCloud : deploys to
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Deployment Node'ų tipai:**
+  - <<device>> : Vartotojo įrenginys
+  - <<executionEnvironment>> : Execution Environment (Cloud/Server)
+  - <<database>> : Duomenų bazė
+  - <<server>> : Serveris/Paslauga
+  - <<storage>> : Saugykla
+  - <<application>> : Aplikacija
+  
+  **Ryšiai:**
+  ..> : komunikacija (HTTPS)
+  <<manifest>> : manifestuoja (fizinis failas)
+  <<use>> : naudoja
+endlegend
+
+note right of MobileDevice
+  **Production Mobile Deployment:**
+  - Android: APK (Google Play Store)
+  - iOS: IPA (App Store)
+  - Flutter build: `flutter build apk/ipa --release`
+  - Naudoja Supabase Cloud (ne lokalų)
+  - Artifacts: app-release.apk, app-release.ipa
+end note
+
+note right of SupabaseCloud
+  **Supabase Cloud Infrastructure:**
+  - Managed PostgreSQL database (production)
+  - Authentication service (production)
+  - File storage (receipts, images)
+  - Edge Functions (serverless)
+  - HTTPS endpoint: https://xxx.supabase.co
+end note
+
+@enduml
+

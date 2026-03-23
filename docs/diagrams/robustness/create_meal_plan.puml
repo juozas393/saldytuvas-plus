@@ -1,0 +1,135 @@
+@startuml Create Meal Plan - Robustness Diagrama
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title UC "Sukurti mitybos planą" - Robustumo diagrama (pagal Activity Diagram)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' BOUNDARY - UI LANGAI (Kairėje pusėje)
+' ============================================
+package "UI Boundaries (Langai)" {
+  rectangle "MealPlanningPage\n(Mitybos planavimo langas)" <<boundary>> as MealPlanningPage
+}
+
+' ============================================
+' BOUNDARY - SERVISŲ ADAPTERIAI (Dešinėje pusėje)
+' ============================================
+package "Service Boundaries (Išorinės sistemos)" {
+  rectangle "GeminiServiceBoundary\n(Gemini API)" <<boundary>> as GeminiBoundary
+  rectangle "SpoonacularServiceBoundary\n(Spoonacular API)" <<boundary>> as SpoonacularBoundary
+}
+
+' ============================================
+' CONTROL OBJEKTAI (Viduryje)
+' ============================================
+package "Control (Verslo logika)" {
+  rectangle "MealPlanningController\n(Mitybos planavimo valdymas)" <<control>> as MealPlanningController
+  rectangle "MealPlanningService\n(Planų generavimas)" <<control>> as MealPlanningService
+  rectangle "InventoryController\n(Inventoriaus valdymas)" <<control>> as InventoryController
+}
+
+' ============================================
+' ENTITY OBJEKTAI (Dešinėje, po servisais)
+' ============================================
+package "Entity (Duomenys)" {
+  rectangle "Inventory\n(Inventorius)" <<entity>> as InventoryEntity
+  rectangle "MealPlan\n(Mitybos planas)" <<entity>> as MealPlanEntity
+}
+
+' ============================================
+' DATABASE (Ne boundary, implementacijos detalė)
+' ============================================
+database "Supabase DB\n(meal_plans, inventory_items)" as Database
+
+' ============================================
+' RYŠIAI: Aktorius -> UI Boundary
+' ============================================
+User --> MealPlanningPage : "Atidaryti mitybos\nplanavimo puslapį"
+
+' ============================================
+' SCENARIJUS: Sukurti mitybos planą
+' ============================================
+
+' 1. Tikslų ir apribojimų įvedimas
+User --> MealPlanningPage : "Atidaryti plano\ngeneravimo formą"
+MealPlanningPage --> MealPlanningController : "OpenCreateMealPlanFormEvent()"
+
+User --> MealPlanningPage : "Suvesti tikslus:\n- Dienos skaičius (1-7)\n- Kalorijų intervalas\n- Makroelementai (neprivaloma)"
+User --> MealPlanningPage : "Suvesti apribojimus:\n- Alergijos\n- Dietos tipas\n- Pageidavimai"
+
+MealPlanningPage --> MealPlanningController : "CreateMealPlanEvent(\ndays, caloriesRange,\nallergies, dietType, preferences)"
+
+MealPlanningController --> MealPlanningController : "Validuoti įvestus\nduomenis"
+
+' Validacijos šaka
+MealPlanningController --> MealPlanningPage : "MealPlanValidationErrorState"
+MealPlanningPage --> User : "Rodyti validacijos klaidas"
+
+' Jei duomenys validūs
+MealPlanningController --> InventoryController : "Gauti inventoriaus snapshot\n(userId)"
+InventoryController --> Database : "Gauti inventoriaus duomenis\nSELECT * FROM inventory_items\nWHERE user_id = ?\nAND deleted_at IS NULL"
+Database --> InventoryController : "Inventory items (JSON)"
+
+InventoryController --> InventoryEntity : "Sukurti inventory snapshot"
+InventoryEntity --> InventoryController : "InventorySnapshot"
+InventoryController --> MealPlanningController : "InventorySnapshot"
+
+' 2. Planų generavimas (Gemini + Spoonacular)
+MealPlanningController --> MealPlanningService : "Generuoti planą\n(userGoals, inventorySnapshot)"
+
+MealPlanningService --> GeminiBoundary : "Generuoti meal-intent\nper Gemini API"
+GeminiBoundary --> MealPlanningService : "MealIntent JSON\n(structured preferences)"
+
+MealPlanningService --> SpoonacularBoundary : "Ieškoti receptų per\nSpoonacular API\n(3 variantai per valgį)"
+SpoonacularBoundary --> MealPlanningService : "List<Recipe>\n(3 variants per meal)"
+
+MealPlanningService --> MealPlanningService : "Sujungti variantus ir\nperskaičiuoti kalorijas"
+MealPlanningService --> MealPlanningService : "Apskaičiuoti ingredientų\npanaudojimą"
+
+MealPlanningService --> MealPlanningController : "GeneratedMealPlan\n(days, meals, 3 variants per meal,\ncalories: balanced ±3%,\ningredientUsage)"
+
+MealPlanningController --> MealPlanEntity : "Sukurti planą"
+MealPlanEntity --> MealPlanningController : "MealPlanEntity (temp)"
+
+MealPlanningController --> MealPlanningPage : "MealPlanGeneratedState\n(mealPlan, variants, caloriesTotal,\ningredientUsage)"
+MealPlanningPage --> User : "Rodo sugeneruotą planą:\n✅ 3 variantai per valgį\n✅ Kalorijų balansas ±3%\n✅ Ingredientų integracija\n+ [Patvirtinti] + [Atšaukti]"
+
+' 3. Patvirtinimas
+User --> MealPlanningPage : "Patvirtinti arba atšaukti"
+
+' Vartotojas patvirtino
+User --> MealPlanningPage : "Paspaudžia 'Patvirtinti'"
+MealPlanningPage --> MealPlanningController : "ConfirmMealPlanEvent(mealPlan)"
+
+MealPlanningController --> MealPlanEntity : "convertToJson()"
+MealPlanEntity --> MealPlanningController : "JSON data"
+
+MealPlanningController --> Database : "Įrašyti mitybos planą\nINSERT INTO meal_plans\n(user_id, plan_start_date,\nplan_end_date, meals, locked_meals)"
+Database --> MealPlanningController : "Inserted meal_plan (id)"
+
+MealPlanningController --> MealPlanningPage : "MealPlanCreatedState\n(message: 'Planas sukurtas!')"
+MealPlanningPage --> User : "Rodyti sėkmės pranešimą:\n✅ 'Planas sukurtas!'"
+
+' Vartotojas atšaukia
+User --> MealPlanningPage : "Paspaudžia 'Atšaukti'"
+MealPlanningPage --> MealPlanningController : "CancelMealPlanEvent()"
+MealPlanningController --> MealPlanningPage : "MealPlanCancelledState()"
+MealPlanningPage --> User : "Grįžta į pagrindinį ekraną"
+
+' ============================================
+' RYŠIAI: Entity -> Entity
+' ============================================
+' MealPlan gali turėti ryšį su Inventory per ingredientus
+MealPlanEntity --> InventoryEntity : "naudojami ingredientai"
+
+@enduml
+

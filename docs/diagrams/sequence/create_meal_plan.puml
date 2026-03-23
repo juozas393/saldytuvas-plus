@@ -1,0 +1,191 @@
+@startuml Create Meal Plan - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Sukurti mitybos planą - Sequence Diagram
+
+actor "Šeimos\nnarys" as User
+participant "MealPlanningPage\n<<screen>>" as Page
+participant "MealPlanningController\n<<control>>" as Controller
+participant "MealPlanningService" as MealService
+participant "GeminiServiceBoundary\n<<boundary>>" as Gemini
+participant "SpoonacularServiceBoundary\n<<boundary>>" as Spoonacular
+participant "ShoppingListService" as ShoppingService
+participant "InventoryEntity\n<<entity>>" as Inventory
+participant "MealPlanEntity\n<<entity>>" as MealPlan
+participant "SupabaseClient\n(Core.Network)" as Supabase
+database "Supabase DB" as Database
+
+== SCENARIJUS: Vartotojas sukuria naują mitybos planą ==
+
+User -> Page: Atidaro plano generavimo formą
+activate Page
+
+Page -> Controller: OpenCreateMealPlanFormEvent()
+activate Controller
+Controller --> Page: CreateMealPlanFormState()
+deactivate Controller
+
+Page -> User: Rodo formą:\n- Dienos skaičius (1-7)\n- Kalorijų intervalas\n- Makroelementai\n- Alergijos\n- Dietos tipas\n- Pageidavimai
+deactivate Page
+
+== Tikslų ir apribojimų įvedimas ==
+
+User -> Page: Suveda duomenis\nir paspaudžia "Generuoti"
+activate Page
+
+Page -> Controller: CreateMealPlanEvent(\n  days: 7,\n  caloriesRange: {min: 1800, max: 2200},\n  allergies: [...],\n  dietType: "vegetarian",\n  preferences: [...]\n)
+activate Controller
+
+Controller -> Controller: validateMealPlanInput(data)
+
+alt Duomenys nevalidūs
+    Controller --> Page: MealPlanValidationErrorState(errors)
+    deactivate Controller
+    Page -> User: Rodo validacijos klaidas
+    deactivate Page
+else Duomenys validūs
+    Controller -> Supabase: from('inventory_items')\n  .select()\n  .eq('user_id', userId)\n  .is_('deleted_at', null)
+    activate Supabase
+    Supabase -> Database: SELECT * FROM inventory_items\nWHERE user_id = ? AND deleted_at IS NULL
+    activate Database
+    Database --> Supabase: Inventory items (JSON)
+    deactivate Database
+    Supabase --> Controller: List<Map<String, dynamic>>
+    deactivate Supabase
+    
+    Controller -> Inventory: createSnapshot(inventoryData)
+    activate Inventory
+    Inventory --> Controller: InventorySnapshot
+    deactivate Inventory
+    
+    Controller -> MealService: generateMealPlan(\n  userGoals,\n  inventorySnapshot\n)
+    activate MealService
+    
+    == Planų generavimas (Gemini + Spoonacular) ==
+    
+    MealService -> Gemini: generateMealIntent(\n  caloriesRange,\n  dietType,\n  allergies,\n  preferences\n)
+    activate Gemini
+    
+    note right of Gemini: **Gemini API:**\nGeneruoja meal-intent JSON\nsu struktūrizuotais pageidavimais
+    
+    Gemini -> Gemini: POST /v1/models/gemini-pro
+    Gemini --> MealService: MealIntent JSON\n(structured preferences)
+    deactivate Gemini
+    
+    MealService -> Spoonacular: searchRecipes(\n  mealIntent,\n  caloriesRange,\n  3 variants per meal\n)
+    activate Spoonacular
+    
+    note right of Spoonacular: **Spoonacular API:**\nIeško 3 receptų variantų\nkiekvienam valgiui\n(breakfast, lunch, dinner)
+    
+    Spoonacular -> Spoonacular: GET /recipes/complexSearch\n+ GET /recipes/{id}/information
+    Spoonacular --> MealService: List<Recipe> (3 variants per meal)
+    deactivate Spoonacular
+    
+    MealService -> MealService: combineVariants(recipes)\n- Sujungti variantus\n- Perskaičiuoti kalorijas\n- Apskaičiuoti ingredientų panaudojimą
+    
+    MealService -> MealService: calculateIngredientUsage(\n  recipes,\n  inventorySnapshot\n)
+    
+    MealService --> Controller: GeneratedMealPlan(\n  days: 7,\n  meals: [...],\n  3 variants per meal,\n  calories: balanced ±3%,\n  ingredientUsage: {...}\n)
+    deactivate MealService
+    
+    Controller -> MealPlan: create(generatedPlan)
+    activate MealPlan
+    MealPlan --> Controller: MealPlanEntity (temp)
+    deactivate MealPlan
+    
+    Controller --> Page: MealPlanGeneratedState(\n  mealPlan: MealPlanEntity,\n  variants: [...],\n  caloriesTotal: 2000,\n  ingredientUsage: {...}\n)
+    deactivate Controller
+    
+    Page -> User: Rodo sugeneruotą planą:\n✅ 3 variantai per valgį\n✅ Kalorijų balansas ±3%\n✅ Ingredientų integracija\n+ [Patvirtinti] + [Atšaukti]
+    deactivate Page
+    
+    == Patvirtinimas ==
+    
+    alt Vartotojas patvirtina
+        User -> Page: Paspaudžia "Patvirtinti"
+        activate Page
+        Page -> Controller: ConfirmMealPlanEvent(mealPlan)
+        activate Controller
+        
+        Controller -> MealPlan: convertToJson()
+        activate MealPlan
+        MealPlan --> Controller: JSON data
+        deactivate MealPlan
+        
+        Controller -> Supabase: from('meal_plans')\n  .insert({\n    user_id: userId,\n    plan_start_date: startDate,\n    plan_end_date: endDate,\n    meals: mealsJson,\n    locked_meals: []\n  })
+        activate Supabase
+        Supabase -> Database: INSERT INTO meal_plans\n(user_id, plan_start_date, plan_end_date, meals, locked_meals)
+        activate Database
+        Database --> Supabase: Inserted meal_plan (id)
+        deactivate Database
+        Supabase --> Controller: Inserted data
+        deactivate Supabase
+        
+        Controller -> ShoppingService: generateShoppingList(\n  mealPlan,\n  inventorySnapshot\n)
+        activate ShoppingService
+        
+        ShoppingService -> ShoppingService: calculateMissingIngredients(\n  mealPlan.ingredients,\n  inventorySnapshot\n)
+        ShoppingService -> ShoppingService: groupByStore(deals)
+        
+        ShoppingService --> Controller: ShoppingListEntity
+        deactivate ShoppingService
+        
+        Controller -> Supabase: from('shopping_lists')\n  .insert({\n    meal_plan_id: mealPlanId,\n    items: shoppingListJson\n  })
+        activate Supabase
+        Supabase -> Database: INSERT INTO shopping_lists\n(meal_plan_id, items)
+        activate Database
+        Database --> Supabase: Success
+        deactivate Database
+        Supabase --> Controller: Success
+        deactivate Supabase
+        
+        Controller --> Page: MealPlanCreatedState(\n  message: "Planas sukurtas!"\n)
+        deactivate Controller
+        
+        Page -> User: Rodo sėkmės pranešimą:\n✅ "Planas sukurtas!"
+        deactivate Page
+        
+    else Vartotojas atšaukia
+        User -> Page: Paspaudžia "Atšaukti"
+        activate Page
+        Page -> Controller: CancelMealPlanEvent()
+        activate Controller
+        Controller --> Page: MealPlanCancelledState()
+        deactivate Controller
+        Page -> User: Grįžta į pagrindinį ekraną
+        deactivate Page
+    endif
+endif
+
+note over User, Database
+  **SVARBU:**
+  - Sistema generuoja planą per Gemini + Spoonacular
+  - 3 variantai per valgį
+  - Kalorijų balansas ±3%
+  - Automatiškai sugeneruojamas shopping list
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

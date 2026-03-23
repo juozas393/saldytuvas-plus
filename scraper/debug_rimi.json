@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "totalProducts": 909,
+  "duration": 157085,
+  "errors": [],
+  "sampleProducts": [
+    {
+      "store": "rimi",
+      "name": "Mažieji slyviniai pomidorai 1kl, 250 g",
+      "originalPrice": 1.55,
+      "discountPrice": 1.29,
+      "discountPercent": 17,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-14T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://rimibaltic-res.cloudinary.com/image/upload/b_white,c_limit,dpr_1.0,f_auto,q_auto:low,w_250/d_ecommerce:backend-fallback.png/MAT_296781_PCE_LT",
+      "unit": null,
+      "pricePerUnit": "5,16\n                    €/kg",
+      "description": null,
+      "storeProductId": null,
+      "productUrl": "https://www.rimi.lt/e-parduotuve/lt/produktai/vaisiai-darzoves-ir-geles/darzoves-ir-grybai/pomidorai/mazieji-slyviniai-pomidorai-1kl-250-g/p/296781",
+      "sourceSection": "Akcijos",
+      "scrapedAt": "2026-03-09T19:07:29.886Z"
+    },
+    {
+      "store": "rimi",
+      "name": "Brokolis RIMI, 350 g",
+      "originalPrice": 1.89,
+      "discountPrice": 0.99,
+      "discountPercent": 48,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-14T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://rimibaltic-res.cloudinary.com/image/upload/b_white,c_limit,dpr_1.0,f_auto,q_auto:low,w_250/d_ecommerce:backend-fallback.png/MAT_978280_PCE_LT",
+      "unit": null,
+      "pricePerUnit": "5,40\n                    €/kg",
+      "description": null,
+      "storeProductId": null,
+      "productUrl": "https://www.rimi.lt/e-parduotuve/lt/produktai/vaisiai-darzoves-ir-geles/darzoves-ir-grybai/kopustai/brokolis-rimi-350-g/p/978280",
+      "sourceSection": "Akcijos",
+      "scrapedAt": "2026-03-09T19:07:29.886Z"
+    },
+    {
+      "store": "rimi",
+      "name": "Cukinija, 1 vnt.",
+      "originalPrice": 1.69,
+      "discountPrice": 0.99,
+      "discountPercent": 41,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-14T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://rimibaltic-res.cloudinary.com/image/upload/b_white,c_limit,dpr_1.0,f_auto,q_auto:low,w_250/d_ecommerce:backend-fallback.png/MAT_975517_PCE_LT",
+      "unit": null,
+      "pricePerUnit": "1,69\n                    €/vnt.",
+      "description": null,
+      "storeProductId": null,
+      "productUrl": "https://www.rimi.lt/e-parduotuve/lt/produktai/vaisiai-darzoves-ir-geles/darzoves-ir-grybai/moliugai-ir-cukinijos/cukinija-1-vnt-/p/975517",
+      "sourceSection": "Akcijos",
+      "scrapedAt": "2026-03-09T19:07:29.886Z"
+    }
+  ]
+}

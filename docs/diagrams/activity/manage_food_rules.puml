@@ -1,0 +1,83 @@
+@startuml PAA7 Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+title PAA7 Valdyti maisto taisykles
+
+|#FFE0B2|Šeimos administratorius|
+start
+:Atidaryti profilio puslapį;
+
+|#C8E6C9|Posistemis|
+:Pateikti nario profilio formą\nsu esamomis taisyklėmis;
+
+|#E1BEE7|Duomenų bazė|
+:Gauti nario alergijas,\nnemėgstamus produktus\nir mitybos tikslus;
+
+|#C8E6C9|Posistemis|
+:Rodyti maisto taisyklių sekciją;
+
+repeat
+
+  |#FFE0B2|Šeimos administratorius|
+  :Peržiūrėti maisto taisykles;
+
+  switch (Pasirinktas veiksmas?)
+  case (Pridėti alergiją)
+    |#FFE0B2|Šeimos administratorius|
+    :Pasirinkti alergiją\niš sąrašo;
+    |#E1BEE7|Duomenų bazė|
+    :Išsaugoti alergiją\nprie nario profilio;
+    |#C8E6C9|Posistemis|
+    :Atnaujinti alergijų sąrašą;
+
+  case (Pašalinti alergiją)
+    |#FFE0B2|Šeimos administratorius|
+    :Paspausti šalinimo mygtuką\nprie alergijos;
+    |#E1BEE7|Duomenų bazė|
+    :Pašalinti alergiją\niš nario profilio;
+
+  case (Pridėti nemėgstamą produktą)
+    |#FFE0B2|Šeimos administratorius|
+    :Įvesti nemėgstamo\nprodukto pavadinimą;
+    |#E1BEE7|Duomenų bazė|
+    :Išsaugoti nemėgstamą\nproduktą;
+
+  case (Pašalinti nemėgstamą produktą)
+    |#FFE0B2|Šeimos administratorius|
+    :Paspausti šalinimo mygtuką\nprie produkto;
+    |#E1BEE7|Duomenų bazė|
+    :Pašalinti nemėgstamą\nproduktą;
+
+  case (Pridėti mėgstamą produktą)
+    |#FFE0B2|Šeimos administratorius|
+    :Įvesti mėgstamo\nprodukto pavadinimą;
+    |#E1BEE7|Duomenų bazė|
+    :Išsaugoti mėgstamą\nproduktą;
+
+  case (Pašalinti mėgstamą produktą)
+    |#FFE0B2|Šeimos administratorius|
+    :Paspausti šalinimo mygtuką\nprie produkto;
+    |#E1BEE7|Duomenų bazė|
+    :Pašalinti mėgstamą\nproduktą;
+
+  case (Pakeisti mitybos tikslą)
+    |#FFE0B2|Šeimos administratorius|
+    :Pasirinkti naują tikslą:\nnumesti svorį, palaikyti\narba auginti raumenis;
+    |#C8E6C9|Posistemis|
+    :Perskaičiuoti dienos\nkalorijų ir baltymų tikslus\npagal fizinius parametrus;
+    |#E1BEE7|Duomenų bazė|
+    :Išsaugoti naujus tikslus;
+    |#C8E6C9|Posistemis|
+    :Pateikti atnaujintus tikslus;
+
+  case (Baigti darbą)
+  endswitch
+
+repeat while (Tęsia redagavimą?)
+
+stop
+@enduml

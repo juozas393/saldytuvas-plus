@@ -1,0 +1,264 @@
+@startuml Logical Architecture - Paketų diagrama
+!theme plain
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+
+title Sistemos Loginė Architektūra - Paketų diagrama
+
+' ============================================
+' AUKŠČIAUSIAS LYGMENIS - Projekto modelis
+' ============================================
+package "Saldytuvas Plus" {
+
+  ' ============================================
+  ' POSISTEMĖS
+  ' ============================================
+  package "Šeimos administravimo posistemis" {
+    
+    ' Domain Layer (tik Use Cases - admin logika)
+    package "Domain" {
+      package "Use Cases" {
+        [RPAA1: Valdyti pirkinių sąrašą <<requirementUseCase>>]
+        [RPAA2: Peržiūrėti mitybos planą <<requirementUseCase>>]
+        [RPAA3: Atnaujinti akcijas <<requirementUseCase>>]
+        [RPAA4: Valdyti prieigą bendro inventoriaus <<requirementUseCase>>]
+        [RPAA5: Valdyti biudžetą <<requirementUseCase>>]
+        [RPAA6: Valdyti šeimos narius <<requirementUseCase>>]
+        [RPAA7: Peržiūrėti maisto taisykles <<requirementUseCase>>]
+        [RPAA8: Siūlyti maisto pakaitalus <<requirementUseCase>>]
+        [RPAA9: Perspėti apie biudžeto būseną <<requirementUseCase>>]
+        [RPAA10: Įspėti apie artėjančią galiojimo pabaigą <<requirementUseCase>>]
+        [RPAA12: Redaguoti mitybos planą <<requirementUseCase>>]
+        [RPAA13: Ištrinti mitybos planą <<requirementUseCase>>]
+        [RPAA14: Sukurti mitybos planą <<requirementUseCase>>]
+      }
+    }
+    
+    ' Naudoja Services, ne Repositories (admin koordinuoja per Services)
+  }
+  
+  ' ============================================
+  ' POSISTEMĖS
+  ' ============================================
+  package "Šeimos nario posistemis" {
+    
+    ' Presentation Layer - Flutter UI + State Management
+    package "Presentation" {
+      package "UI Boundaries" {
+        [HomePage <<boundary>>]
+        [InventoryPage <<boundary>>]
+        [ProductDetailsPage <<boundary>>]
+        [AddProductPage <<boundary>>]
+        [ReceiptAndBudgetPage <<boundary>>]
+        [DealsPage <<boundary>>]
+        [StoreDealsPage <<boundary>>]
+        [ShoppingListScreen <<boundary>>]
+        [LoginPage <<boundary>>]
+        [ProfilePage <<boundary>>]
+        [SettingsPage <<boundary>>]
+        [MealPlanningPage <<boundary>>]
+        [DishDetailsPage <<boundary>>]
+        [AddRecipePage <<boundary>>]
+        [NutritionPage <<boundary>>]
+      }
+      
+      package "Controllers" {
+        [RouterController <<control>>]
+        [DashboardController <<control>>]
+        [InventoryController <<control>>]
+        [ProductController <<control>>]
+        [ProductScanController <<control>>]
+        [ReceiptAndBudgetController <<control>>]
+        [MealPlanningController <<control>>]
+        [RecipeController <<control>>]
+        [HealthEvaluationController <<control>>]
+        [ShoppingListController <<control>>]
+        [DealsController <<control>>]
+        [BudgetController <<control>>]
+        [AuthController <<control>>]
+        [ProfileController <<control>>]
+        [SettingsController <<control>>]
+      }
+    }
+    
+    ' Domain Layer
+    package "Domain" {
+      package "Use Cases" {
+        [RPAN1: Registruotis <<requirementUseCase>>]
+        [RPAN2: Valdyti paskyrą <<requirementUseCase>>]
+        [RPAN4: Peržiūrėti akcijas <<requirementUseCase>>]
+        [RPAN6: Peržiūrėti biudžetą <<requirementUseCase>>]
+        [RPAN7: Fiksuoti suvartotą maistą <<requirementUseCase>>]
+        [RPAN8: Valdyti produktus <<requirementUseCase>>]
+        [RPAN9: Atpažinti maistą iš nuotraukos <<requirementUseCase>>]
+        [RPAN10: Įvertinti sveikatingumą <<requirementUseCase>>]
+        [RPAN14: Prisijungti <<requirementUseCase>>]
+        [RPAN15: Atsijungti <<requirementUseCase>>]
+        [RPAN16: Siūlyti pirkinius <<requirementUseCase>>]
+      }
+      
+      package "Entities" {
+        [Product <<Entity>>]
+        [Inventory <<Entity>>]
+        [Receipt <<Entity>>]
+        [ReceiptLine <<Entity>>]
+        [Budget <<Entity>>]
+        [MealPlan <<Entity>>]
+        [Meal <<Entity>>]
+        [Dish <<Entity>>]
+        [FoodRule <<Entity>>]
+        [Recipe <<Entity>>]
+        [ShoppingList <<Entity>>]
+        [Deal <<Entity>>]
+        [Store <<Entity>>]
+        [User <<Entity>>]
+        [NutritionInfo <<Entity>>]
+      }
+    }
+    
+    ' Data Layer
+    package "Data" {
+      package "Repositories" {
+        [IInventoryRepository]
+        [IReceiptRepository]
+        [IBudgetRepository]
+        [IMealPlanRepository]
+        [IShoppingListRepository]
+        [IRecipeRepository]
+        [IUserRepository]
+        [IDealsRepository]
+      }
+      
+      package "External Boundaries" {
+        [SupabaseGateway <<boundary>>]
+        [CameraGalleryBoundary <<boundary>>]
+        [GeminiServiceBoundary <<boundary>>]
+        [OCRServiceBoundary <<boundary>>]
+        [OpenFoodFactsServiceBoundary <<boundary>>]
+        [SpoonacularServiceBoundary <<boundary>>]
+        [MobileScannerBoundary <<boundary>>]
+      }
+    }
+  }
+  
+  ' ============================================
+  ' BENDRI PAKETAI (Cross-cutting)
+  ' ============================================
+  package "Core" {
+    package "Config" {
+      [AppConfig]
+    }
+    
+    package "Errors" {
+      [Exceptions]
+      [Failures]
+    }
+    
+    package "Network" {
+      [SupabaseClient]
+      [HttpClient]
+    }
+    
+    package "Storage" {
+      [LocalStorage]
+    }
+    
+    package "Theme" {
+      [AppTheme]
+    }
+    
+    package "Utils" {
+      [Helpers]
+    }
+  }
+  
+  ' ============================================
+  ' PASLAUGŲ PAKETAS
+  ' Paslaugos su verslo logika, naudoja Repositories ir External Boundaries
+  ' ============================================
+  package "Services" {
+    [MealPlanningService]
+    [ShoppingListService]
+    [ReceiptParsingService]
+    [ImageProcessingService]
+    [OCRService]
+    [BarcodeScannerService]
+    [NutritionService]
+    [HealthScoreService]
+    [FoodRecognitionService]
+    [DealsScraperService]
+    [GeminiService]
+    [SpoonacularService]
+    [OpenFoodFactsService]
+  }
+}
+
+' ============================================
+' RYŠIAI - Priklausomybės
+' ============================================
+
+' Šeimos nario posistemis - trijų sluoksnių architektūra
+"Šeimos nario posistemis"."Presentation" ..> "Šeimos nario posistemis"."Domain" : uses
+"Šeimos nario posistemis"."Domain" ..> "Services" : uses
+"Šeimos nario posistemis"."Domain" ..> "Šeimos nario posistemis"."Data"."Repositories" : uses
+
+' Šeimos administravimo posistemis - naudoja Services
+"Šeimos administravimo posistemis"."Domain" ..> "Services" : uses
+
+' Posistemės → Core
+"Šeimos administravimo posistemis" ..> "Core" : uses
+"Šeimos nario posistemis" ..> "Core" : uses
+
+' Services dependencies
+"Services" ..> "Core" : uses
+"Services" ..> "Šeimos nario posistemis"."Data"."Repositories" : uses
+"Services" ..> "Šeimos nario posistemis"."Data"."External Boundaries" : uses
+
+' Data layer dependencies
+"Šeimos nario posistemis"."Data"."Repositories" ..> "Šeimos nario posistemis"."Data"."External Boundaries"."SupabaseGateway" : uses
+"Šeimos nario posistemis"."Data"."External Boundaries"."SupabaseGateway" ..> "Core"."Network"."SupabaseClient" : uses
+
+note right of "Services"
+  **Services** = verslo logika, koordinuoja:
+  - Repositories (DB duomenims per SupabaseGateway)
+  - External Boundaries (API/device calls)
+  
+  **ServiceBoundary** = adapteriai į išorines sistemas:
+  - GeminiServiceBoundary → Gemini API
+  - OCRServiceBoundary → ML Kit OCR
+  - OpenFoodFactsServiceBoundary → OFF API
+  - CameraGalleryBoundary → Device API
+end note
+
+note bottom of "Šeimos nario posistemis"."Data"."External Boundaries"."SupabaseGateway"
+  SupabaseGateway wrap'ina
+  Core.Network.SupabaseClient
+  (nėra dubliavimo)
+end note
+
+note top of "Šeimos nario posistemis"."Presentation"
+  **Flutter architektūra:**
+  - UI Boundaries = Flutter Pages/Widgets (StatelessWidget, StatefulWidget)
+  - Controllers = BLoC objektai (Events → States)
+  - State management per flutter_bloc paketą
+end note
+
+note right of "Šeimos nario posistemis"."Domain"
+  **Domain Layer:**
+  
+  **Use Cases → Services:**
+  - Sudėtingesni UC (AI, OCR, meal planning)
+  - Reikia koordinuoti kelias repo/API
+  
+  **Use Cases → Repositories:**
+  - Paprastesni UC (CRUD operacijai)
+  - Tiesioginis DB skaitymas/rašymas
+  
+  **Pavyzdžiai:**
+  - RPAN8 (Valdyti produktus) → Repositories (paprastas CRUD)
+  - RPAN9 (Atpažinti maistą) → Services (OCR + Gemini)
+  - RPAN10 (Įvertinti sveikatingumą) → Services (verslo logika)
+end note
+
+@enduml
+

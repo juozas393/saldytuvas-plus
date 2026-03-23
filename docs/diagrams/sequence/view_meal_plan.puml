@@ -1,0 +1,101 @@
+@startuml View Meal Plan - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Peržiūrėti mitybos planą - Sequence Diagram
+
+actor "Šeimos\nnarys" as User
+participant "MealPlanningPage\n<<screen>>" as Page
+participant "MealPlanningController\n<<control>>" as Controller
+participant "MealPlanEntity\n<<entity>>" as MealPlan
+participant "SupabaseClient\n(Core.Network)" as Supabase
+database "Supabase DB\n(meal_plans)" as Database
+
+== SCENARIJUS: Vartotojas peržiūri mitybos planą ==
+
+User -> Page: Atidaro MealPlanningPage
+activate Page
+
+Page -> Controller: LoadMealPlanEvent(date: today)
+activate Controller
+
+note right of Controller: **BE REPOSITORY:**\nController tiesiogiai naudoja\nSupabaseClient
+
+Controller -> Supabase: from('meal_plans')\n  .select()\n  .eq('user_id', userId)\n  .gte('plan_start_date', today)\n  .lte('plan_end_date', today)
+activate Supabase
+
+Supabase -> Database: SELECT * FROM meal_plans\nWHERE user_id = ?\nAND plan_start_date <= CURRENT_DATE\nAND plan_end_date >= CURRENT_DATE\nAND deleted_at IS NULL
+activate Database
+
+alt Planas rastas
+    Database --> Supabase: MealPlan data (JSON)
+    deactivate Database
+    Supabase --> Controller: List<Map<String, dynamic>>
+    deactivate Supabase
+    
+    Controller -> Controller: mapToMealPlanEntity(data)
+    Controller -> MealPlan: create(data)
+    activate MealPlan
+    MealPlan --> Controller: MealPlanEntity
+    deactivate MealPlan
+    
+    Controller -> Controller: processMealPlanData(mealPlan)\n- Dienos struktūra\n- Valgiai per dieną\n- Kalorijų kiekis\n- Ingredientų informacija
+    
+    Controller --> Page: MealPlanLoadedState(\n  mealPlan: MealPlanEntity,\n  days: [...],\n  meals: [...],\n  calories: {...}\n)
+    deactivate Controller
+    
+    Page -> User: Rodo esamą mitybos planą:\n• Dienos (Pirmadienis, Antradienis...)\n• Valgiai per dieną\n  - Pusryčiai\n  - Pietūs\n  - Vakarienė\n• Kalorijų kiekis per valgį\n• Confidence indikatoriai\n• Ingredientų sutapimas %
+    deactivate Page
+    
+    User -> Page: Scroll per dienas\nIšplėsti valgio detales
+    activate Page
+    Page -> Controller: ExpandMealEvent(day, mealType)
+    activate Controller
+    Controller --> Page: MealExpandedState(mealDetails)
+    deactivate Controller
+    Page --> User: Rodo detalų informaciją\n(ingredientai, kalorijos)
+    deactivate Page
+
+else Planas nerastas
+    Database --> Supabase: null (no results)
+    deactivate Database
+    Supabase --> Controller: empty list
+    deactivate Supabase
+    
+    Controller --> Page: MealPlanNotFoundState()
+    deactivate Controller
+    
+    Page -> User: Rodo tuščią būseną:\n"Planas nerastas"\n+ Mygtukas "Generuoti planą"
+    deactivate Page
+endif
+
+note over User, Database
+  **SVARBU:**
+  - Vartotojas tik PERŽIŪRI planą (read-only)
+  - Sistema rodo visą plano informaciją
+  - Vartotojas gali scroll'inti per dienas ir matyti detalius
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

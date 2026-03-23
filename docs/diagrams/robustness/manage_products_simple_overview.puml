@@ -1,0 +1,143 @@
+@startuml Manage Products Robustness - Simple Overview
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Robustumo diagrama - Valdyti produktus (Paprasta peržiūra)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' UI BOUNDARIES (Langai) - Sistemos ribos su vartotoju
+' ============================================
+rectangle "Inventoriaus langas\n(Produktų peržiūra)" <<boundary>> as InventoryPage
+rectangle "Produkto pridėjimo langas\n(Forma)" <<boundary>> as AddProductPage
+rectangle "Produkto kortelės langas\n(Detalės/Redagavimas)" <<boundary>> as ProductDetailPage
+
+' ============================================
+' CONTROLLER (Verslo logika) - Valdo procesus
+' ============================================
+rectangle "InventoryBloc\n(Inventoriaus valdymas)" <<control>> as InventoryBloc
+
+' ============================================
+' EXTERNAL BOUNDARIES (Išorinės sistemos) - Kas yra boundary?
+' ============================================
+
+rectangle "Supabase API\n(Duomenų bazė)" <<boundary>> as Supabase
+rectangle "Open Food Facts API\n(Produktų duomenys)" <<boundary>> as OpenFoodAPI
+rectangle "Mobile Scanner\n(Barcode skaitymas)" <<boundary>> as BarcodeScanner
+rectangle "Image Picker\n(Kamera + Galerija)" <<boundary>> as ImagePicker
+rectangle "ML Kit OCR\n(Tekstų atpažinimas)" <<boundary>> as MLKitOCR
+rectangle "Gemini API\n(AI analizė)" <<boundary>> as GeminiAPI
+
+note right of ImagePicker
+  ✅ **TAIP - Galerija YRA Boundary!**
+  
+  Image Picker Boundary apima:
+  - 📷 Kamerą (foto)
+  - 🖼️ Galeriją (pasirinkti nuotrauką)
+  - 🔐 Leidimų valdymą
+  
+  Viskas yra VIENAS boundary!
+end note
+
+' ============================================
+' ENTITIES (Duomenų modeliai)
+' ============================================
+rectangle "Product\n(Produktas)" <<entity>> as Product
+rectangle "InventoryItem\n(Inventoriaus elementas)" <<entity>> as InventoryItem
+
+' ============================================
+' PAGRINDINIAI RYŠIAI - Kas su kuo jungiasi
+' ============================================
+
+' 1. User → UI Boundaries
+User --> InventoryPage : peržiūrėti produktus
+User --> AddProductPage : pridėti produktą
+User --> ProductDetailPage : redaguoti/ištrinti
+
+' 2. UI Boundaries → Controller
+InventoryPage --> InventoryBloc : įvykiai (Load, Add, Update, Delete)
+AddProductPage --> InventoryBloc : įvykiai (Add, Scan, ProcessImage)
+ProductDetailPage --> InventoryBloc : įvykiai (Update, Delete)
+
+' 3. Controller → External Boundaries (Išorinės sistemos)
+InventoryBloc --> Supabase : CRUD operacijos (produktai)
+InventoryBloc --> BarcodeScanner : skenuoti barcode
+InventoryBloc --> ImagePicker : atidaryti kamerą arba galeriją
+InventoryBloc --> OpenFoodAPI : gauti produkto duomenis
+InventoryBloc --> MLKitOCR : atpažinti tekstą
+InventoryBloc --> GeminiAPI : analizuoti čekį (AI)
+
+' 4. External Boundaries → Controller (atsakymai)
+Supabase --> InventoryBloc : grąžina produktų sąrašą
+BarcodeScanner --> InventoryBloc : grąžina barcode
+ImagePicker --> InventoryBloc : grąžina nuotrauką (iš kameros arba galerijos)
+OpenFoodAPI --> InventoryBloc : grąžina produkto duomenis
+MLKitOCR --> InventoryBloc : grąžina atpažintą tekstą
+GeminiAPI --> InventoryBloc : grąžina JSON su produktais
+
+' 5. Controller → Entities (Duomenų modeliai)
+InventoryBloc --> Product : valdo Product objektą
+InventoryBloc --> InventoryItem : valdo InventoryItem objektą
+
+' 6. Controller → UI Boundaries (atsakymai/būsenos)
+InventoryBloc --> InventoryPage : būsenos (ProductsLoaded, ProductAdded)
+InventoryBloc --> AddProductPage : būsenos (ProductScanned, Error)
+InventoryBloc --> ProductDetailPage : būsenos (ProductUpdated, ProductDeleted)
+
+note bottom of InventoryBloc
+  **Controller (InventoryBloc)**:
+  - Valdo visus produktų valdymo procesus
+  - Koordinuoja ryšius tarp Boundaries ir Entities
+  - Valdo UI būseną
+end note
+
+note bottom
+  **SANTRAUKA:**
+  
+  **Boundaries** (Sistemos ribos):
+  - UI Boundaries = Langai (InventoryPage, AddProductPage, ir t.t.)
+  - External Boundaries = Išorinės sistemos (Supabase, APIs, Kamera/Galerija)
+  
+  **Controller** = Verslo logika (InventoryBloc)
+  
+  **Entities** = Duomenų modeliai (Product, InventoryItem)
+  
+  **Kamera ir Galerija** = VIENAS boundary (ImagePicker) ✅
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

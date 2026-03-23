@@ -1,0 +1,350 @@
+@startuml Manage Products - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam sequenceArrowThickness 2
+
+title Valdyti Produktus - Sequence Diagram
+
+actor "Šeimos narys" as Member
+participant "InventoryPage" as InventoryPage <<screen>>
+participant "ProductDetailsPage" as ProductDetailsPage <<screen>>
+participant "AddProductPage" as AddProductPage <<screen>>
+participant "RouterController" as Router <<control>>
+participant "InventoryController" as InventoryCtrl <<control>>
+participant "ProductController" as ProductCtrl <<control>>
+participant "ProductScanController" as ScanCtrl <<control>>
+participant "InventoryEntity" as Inventory <<entity>>
+participant "ProductEntity" as Product <<entity>>
+participant "MobileScannerBoundary" as Scanner <<boundary>>
+participant "CameraGalleryBoundary" as Camera <<boundary>>
+participant "OpenFoodFactsServiceBoundary" as OpenFoodFacts <<boundary>>
+participant "OCRServiceBoundary" as OCR <<boundary>>
+participant "GeminiServiceBoundary" as Gemini <<boundary>>
+database "Open Food Facts API" as OpenFoodFactsAPI
+database "ML Kit OCR" as MLKitOCR
+database "Gemini API" as GeminiAPI
+
+==
+
+group Peržiūrėti produktus
+  Member -> InventoryPage: Paspausti mygtuką "Peržiūrėti produktus"
+  activate InventoryPage
+  InventoryPage -> Router: Navigate to InventoryPage
+  activate Router
+  Router -> InventoryCtrl: Initialize
+  activate InventoryCtrl
+  InventoryCtrl -> Inventory: Get all products
+  activate Inventory
+  Inventory -> Inventory: Query products
+  Inventory --> InventoryCtrl: Return product list
+  deactivate Inventory
+  InventoryCtrl --> InventoryPage: Display products
+  deactivate InventoryCtrl
+  InventoryPage --> Member: Show product list
+  deactivate InventoryPage
+  deactivate Router
+end
+
+==
+
+alt Redaguoti produktą
+  Member -> InventoryPage: Pasirinkti produktą
+  activate InventoryPage
+  InventoryPage -> Router: Navigate to ProductDetailsPage
+  activate Router
+  Router -> ProductCtrl: Load product details
+  activate ProductCtrl
+  ProductCtrl -> Product: Get product by ID
+  activate Product
+  Product --> ProductCtrl: Return product data
+  deactivate Product
+  ProductCtrl --> ProductDetailsPage: Display product details
+  deactivate ProductCtrl
+  ProductDetailsPage --> Member: Show product details
+  deactivate Router
+  
+  Member -> ProductDetailsPage: Paspausti "Redaguoti"
+  activate ProductDetailsPage
+  ProductDetailsPage -> Router: Navigate to AddProductPage (edit mode)
+  activate Router
+  Router -> ProductCtrl: Load product for editing
+  activate ProductCtrl
+  ProductCtrl -> Product: Get product data
+  activate Product
+  Product --> ProductCtrl: Return product
+  deactivate Product
+  ProductCtrl --> AddProductPage: Display editable form
+  deactivate ProductCtrl
+  
+  Member -> AddProductPage: Redaguoti duomenis
+  activate AddProductPage
+  Member -> AddProductPage: Išsaugoti pakeitimus
+  AddProductPage -> ProductCtrl: Update product
+  activate ProductCtrl
+  ProductCtrl -> Product: Validate data
+  activate Product
+  Product --> ProductCtrl: Validation result
+  deactivate Product
+  
+  alt Duomenys teisingi
+    ProductCtrl -> Inventory: Check for duplicates
+    activate Inventory
+    Inventory -> Product: Find duplicates
+    activate Product
+    Product --> Inventory: Duplicate check result
+    deactivate Product
+    Inventory --> ProductCtrl: Duplicate status
+    deactivate Inventory
+    
+    alt Rastas dublikatas
+      ProductCtrl -> Inventory: Merge products
+      activate Inventory
+      Inventory --> ProductCtrl: Products merged
+      deactivate Inventory
+    else Ne dublikatas
+      ProductCtrl -> Inventory: Create/Update product
+      activate Inventory
+      Inventory --> ProductCtrl: Product saved
+      deactivate Inventory
+    end
+    
+    ProductCtrl --> AddProductPage: Success
+    AddProductPage --> Member: Show success message
+  else Duomenys neteisingi
+    ProductCtrl --> AddProductPage: Validation error
+    AddProductPage --> Member: Show error message
+  end
+  deactivate ProductCtrl
+  deactivate AddProductPage
+  deactivate Router
+end
+
+==
+
+alt Ištrinti produktą
+  Member -> ProductDetailsPage: Paspausti "Ištrinti produktą"
+  activate ProductDetailsPage
+  ProductDetailsPage -> ProductDetailsPage: Show confirmation dialog
+  ProductDetailsPage --> Member: Confirm deletion?
+  
+  alt Patvirtinta ištrynimas
+    Member -> ProductDetailsPage: Patvirtinti
+    ProductDetailsPage -> ProductCtrl: Delete product
+    activate ProductCtrl
+    ProductCtrl -> Inventory: Remove product
+    activate Inventory
+    Inventory -> Product: Delete product
+    activate Product
+    Product --> Inventory: Product deleted
+    deactivate Product
+    Inventory --> ProductCtrl: Deletion successful
+    deactivate Inventory
+    ProductCtrl --> ProductDetailsPage: Success
+    deactivate ProductCtrl
+    ProductDetailsPage -> Router: Navigate back
+    activate Router
+    Router --> InventoryPage: Return to list
+    deactivate Router
+    ProductDetailsPage --> Member: Show success message
+  else Atšaukta
+    ProductDetailsPage --> Member: Cancelled
+  end
+  deactivate ProductDetailsPage
+end
+
+==
+
+alt Pridėti produktą - Barcode scanning
+  Member -> InventoryPage: Paspausti "Pridėti produktą"
+  activate InventoryPage
+  InventoryPage -> Router: Navigate to AddProductPage
+  activate Router
+  Router --> AddProductPage: Open add product form
+  deactivate Router
+  deactivate InventoryPage
+  
+  Member -> AddProductPage: Paspausti "Nuskaityti barkodą"
+  activate AddProductPage
+  AddProductPage -> ScanCtrl: Start barcode scan
+  activate ScanCtrl
+  ScanCtrl -> Scanner: Scan barcode
+  activate Scanner
+  Scanner --> ScanCtrl: Barcode detected
+  deactivate Scanner
+  ScanCtrl -> ScanCtrl: Save barcode
+  ScanCtrl -> OpenFoodFacts: Search product by barcode
+  activate OpenFoodFacts
+  OpenFoodFacts -> OpenFoodFactsAPI: Query product data
+  activate OpenFoodFactsAPI
+  OpenFoodFactsAPI --> OpenFoodFacts: Return product data
+  deactivate OpenFoodFactsAPI
+  OpenFoodFacts --> ScanCtrl: Product information
+  deactivate OpenFoodFacts
+  
+  alt Produktas rastas
+    ScanCtrl -> ProductCtrl: Create product from barcode
+    activate ProductCtrl
+    ProductCtrl -> Product: Create product entity
+    activate Product
+    Product --> ProductCtrl: Product created
+    deactivate Product
+    ProductCtrl -> Inventory: Add product to inventory
+    activate Inventory
+    Inventory --> ProductCtrl: Product added
+    deactivate Inventory
+    ProductCtrl --> ScanCtrl: Success
+    deactivate ProductCtrl
+    ScanCtrl --> AddProductPage: Display product info
+    AddProductPage --> Member: Show product details
+  else Produktas nerastas
+    ScanCtrl --> AddProductPage: Error message
+    AddProductPage --> Member: Show error "Produktas nerastas"
+  end
+  deactivate ScanCtrl
+  deactivate AddProductPage
+end
+
+==
+
+alt Pridėti produktą - Receipt/Image scanning
+  Member -> AddProductPage: Paspausti "Nufotografuoti čekį" arba "Pasirinkti nuotrauką"
+  activate AddProductPage
+  
+  opt Nuotrauka iš kameros
+    AddProductPage -> Camera: Request camera permission
+    activate Camera
+    Camera --> AddProductPage: Permission granted
+    AddProductPage -> Camera: Open camera
+    Camera --> Member: Show camera
+    Member -> Camera: Take photo
+    Camera --> AddProductPage: Photo captured
+    deactivate Camera
+  else Nuotrauka iš galerijos
+    AddProductPage -> Camera: Request gallery permission
+    activate Camera
+    Camera --> AddProductPage: Permission granted
+    AddProductPage -> Camera: Open gallery
+    Camera --> Member: Show gallery
+    Member -> Camera: Select photo
+    Camera --> AddProductPage: Photo selected
+    deactivate Camera
+  end
+  
+  AddProductPage -> ScanCtrl: Process receipt/image
+  activate ScanCtrl
+  
+  group Image preprocessing
+    ScanCtrl -> ScanCtrl: Calculate image dimensions and size
+    alt DPI per mažas
+      ScanCtrl --> AddProductPage: Error "DPI per mažas"
+      AddProductPage --> Member: Show error message
+    else DPI geras
+      ScanCtrl -> ScanCtrl: Expand image
+      ScanCtrl -> ScanCtrl: Remove RGB colors
+      ScanCtrl -> ScanCtrl: Improve contrast
+      ScanCtrl -> ScanCtrl: Remove noise
+      ScanCtrl -> ScanCtrl: Convert back to file
+      ScanCtrl -> ScanCtrl: Save processed image
+    end
+  end
+  
+  ScanCtrl -> OCR: Start OCR process
+  activate OCR
+  OCR -> MLKitOCR: Scan image
+  activate MLKitOCR
+  MLKitOCR --> OCR: OCR result text
+  deactivate MLKitOCR
+  OCR -> OCR: Normalize text
+  OCR --> ScanCtrl: OCR result
+  deactivate OCR
+  
+  alt OCR pavyko
+    ScanCtrl -> Gemini: Analyze image with OCR text
+    activate Gemini
+    Gemini -> GeminiAPI: Analyze image
+    activate GeminiAPI
+    GeminiAPI --> Gemini: Analysis result (JSON)
+    deactivate GeminiAPI
+    Gemini --> ScanCtrl: Product list with confidence
+    deactivate Gemini
+    
+    ScanCtrl -> OpenFoodFacts: Search products by name
+    activate OpenFoodFacts
+    loop Kiekvienam produktui
+      OpenFoodFacts -> OpenFoodFactsAPI: Search product
+      activate OpenFoodFactsAPI
+      OpenFoodFactsAPI --> OpenFoodFacts: Product data
+      deactivate OpenFoodFactsAPI
+    end
+    OpenFoodFacts --> ScanCtrl: Products data
+    deactivate OpenFoodFacts
+    
+    ScanCtrl -> ProductCtrl: Create products
+    activate ProductCtrl
+    loop Kiekvienam produktui
+      ProductCtrl -> Product: Create entity
+      activate Product
+      Product --> ProductCtrl: Product entity
+      deactivate Product
+    end
+    ProductCtrl -> Inventory: Add products to inventory
+    activate Inventory
+    Inventory --> ProductCtrl: Products added
+    deactivate Inventory
+    ProductCtrl --> ScanCtrl: Success
+    deactivate ProductCtrl
+    
+    ScanCtrl --> AddProductPage: Show products list
+    AddProductPage --> Member: Display products with confidence values
+  else OCR nepavyko
+    ScanCtrl --> AddProductPage: Error message
+    AddProductPage --> Member: Show error "OCR nepavyko"
+  end
+  deactivate ScanCtrl
+  deactivate AddProductPage
+end
+
+==
+
+alt Pridėti produktą - Manual entry
+  Member -> AddProductPage: Paspausti "Suvesti produkto informaciją"
+  activate AddProductPage
+  Member -> AddProductPage: Įvesti produkto duomenis
+  Member -> AddProductPage: Paspausti "Išsaugoti"
+  
+  AddProductPage -> ProductCtrl: Create product
+  activate ProductCtrl
+  ProductCtrl -> Product: Validate data
+  activate Product
+  Product --> ProductCtrl: Validation result
+  deactivate Product
+  
+  alt Duomenys teisingi
+    ProductCtrl -> Inventory: Check for duplicates
+    activate Inventory
+    Inventory --> ProductCtrl: No duplicates
+    deactivate Inventory
+    
+    ProductCtrl -> Product: Create product entity
+    activate Product
+    Product --> ProductCtrl: Product created
+    deactivate Product
+    
+    ProductCtrl -> Inventory: Add product to inventory
+    activate Inventory
+    Inventory --> ProductCtrl: Product added
+    deactivate Inventory
+    
+    ProductCtrl --> AddProductPage: Success
+    AddProductPage --> Member: Show success message
+  else Duomenys neteisingi
+    ProductCtrl --> AddProductPage: Validation error
+    AddProductPage --> Member: Show error message
+  end
+  deactivate ProductCtrl
+  deactivate AddProductPage
+end
+
+@enduml
+

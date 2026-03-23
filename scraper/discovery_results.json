@@ -1,0 +1,251 @@
+{
+  "promoSections": [
+    {
+      "name": "baltasis vynas",
+      "url": "https://www.lidl.lt/c/baltasis-vynas/a10019966"
+    },
+    {
+      "name": "raudonasis vynas",
+      "url": "https://www.lidl.lt/c/raudonasis-vynas/a10020001"
+    },
+    {
+      "name": "rozinis vynas",
+      "url": "https://www.lidl.lt/c/rozinis-vynas/a10025131"
+    },
+    {
+      "name": "putojantis vynas",
+      "url": "https://www.lidl.lt/c/putojantis-vynas/a10025132"
+    },
+    {
+      "name": "degtine",
+      "url": "https://www.lidl.lt/c/degtine/a10025224"
+    },
+    {
+      "name": "likeriai",
+      "url": "https://www.lidl.lt/c/likeriai/a10025225"
+    },
+    {
+      "name": "brendis ir viskis",
+      "url": "https://www.lidl.lt/c/brendis-ir-viskis/a10025226"
+    },
+    {
+      "name": "kiti gerimai",
+      "url": "https://www.lidl.lt/c/kiti-gerimai/a10025227"
+    },
+    {
+      "name": "super savaitgalis",
+      "url": "https://www.lidl.lt/c/super-savaitgalis/a10025645"
+    },
+    {
+      "name": "svarbiausios sios savaites akcijos",
+      "url": "https://www.lidl.lt/c/svarbiausios-sios-savaites-akcijos/a10023711"
+    },
+    {
+      "name": "deluxe",
+      "url": "https://www.lidl.lt/c/deluxe/a10088793"
+    },
+    {
+      "name": "ne maisto prekiu pasiulymai",
+      "url": "https://www.lidl.lt/c/ne-maisto-prekiu-pasiulymai/a10086868"
+    },
+    {
+      "name": "azijos stiliaus produktai",
+      "url": "https://www.lidl.lt/c/azijos-stiliaus-produktai/a10026526"
+    }
+  ],
+  "catalogSections": [
+    {
+      "name": "kainu leidiniai",
+      "url": "https://www.lidl.lt/c/kainu-leidiniai/s10020254"
+    },
+    {
+      "name": "maistas gerimai ir buities prekes",
+      "url": "https://www.lidl.lt/c/maistas-gerimai-ir-buities-prekes/s10068374"
+    },
+    {
+      "name": "virtuve ir buitis",
+      "url": "https://www.lidl.lt/c/virtuve-ir-buitis/s10068166"
+    },
+    {
+      "name": "sodas ir dirbtuves",
+      "url": "https://www.lidl.lt/c/sodas-ir-dirbtuves/s10068222"
+    },
+    {
+      "name": "sportas ir laisvalaikis",
+      "url": "https://www.lidl.lt/c/sportas-ir-laisvalaikis/s10068226"
+    },
+    {
+      "name": "namai ir interjeras",
+      "url": "https://www.lidl.lt/c/namai-ir-interjeras/s10068371"
+    },
+    {
+      "name": "apranga ir aksesuarai",
+      "url": "https://www.lidl.lt/c/apranga-ir-aksesuarai/s10068373"
+    },
+    {
+      "name": "prekes vaikams ir kudikiams zaislai",
+      "url": "https://www.lidl.lt/c/prekes-vaikams-ir-kudikiams-zaislai/s10068225"
+    },
+    {
+      "name": "alkoholiniai gerimai",
+      "url": "https://www.lidl.lt/c/alkoholiniai-gerimai/s10019968"
+    },
+    {
+      "name": "lidl plus",
+      "url": "https://www.lidl.lt/c/lidl-plus/s10024635"
+    },
+    {
+      "name": "prieinamumo direktyva/s10073730?pageId=10073730",
+      "url": "https://www.lidl.lt/c/prieinamumo-direktyva/s10073730?pageId=10073730"
+    },
+    {
+      "name": "mano nuomone",
+      "url": "https://www.lidl.lt/c/mano-nuomone/s10019139"
+    },
+    {
+      "name": "parkside r tau pavyks",
+      "url": "https://www.lidl.lt/c/parkside-r-tau-pavyks/s10028185"
+    },
+    {
+      "name": "kainu leidiniai/s10020254?pageId=10020254",
+      "url": "https://www.lidl.lt/c/kainu-leidiniai/s10020254?pageId=10020254"
+    },
+    {
+      "name": "parduotuviu paieska/s10025528?pageId=10025528",
+      "url": "https://www.lidl.lt/c/parduotuviu-paieska/s10025528?pageId=10025528"
+    },
+    {
+      "name": "dovanu korteles",
+      "url": "https://www.lidl.lt/c/dovanu-korteles/s10019972"
+    },
+    {
+      "name": "kaip naudotis lidl plus",
+      "url": "https://www.lidl.lt/c/kaip-naudotis-lidl-plus/s10024636"
+    },
+    {
+      "name": "uzsisakyk ir atsiimk",
+      "url": "https://www.lidl.lt/c/uzsisakyk-ir-atsiimk/s10053502"
+    },
+    {
+      "name": "partneriu pasiulymai",
+      "url": "https://www.lidl.lt/c/partneriu-pasiulymai/s10024350"
+    },
+    {
+      "name": "kuponas plus",
+      "url": "https://www.lidl.lt/c/kuponas-plus/s10025027"
+    },
+    {
+      "name": "lidl pay",
+      "url": "https://www.lidl.lt/c/lidl-pay/s10056201"
+    },
+    {
+      "name": "duomenu apsauga lidl plus",
+      "url": "https://www.lidl.lt/c/duomenu-apsauga-lidl-plus/s10024634"
+    },
+    {
+      "name": "naudojimo salygos lidl plus",
+      "url": "https://www.lidl.lt/c/naudojimo-salygos-lidl-plus/s10024450"
+    },
+    {
+      "name": "informacija lidl plus",
+      "url": "https://www.lidl.lt/c/informacija-lidl-plus/s10024448"
+    },
+    {
+      "name": "kainu leidiniai/s10020254?pageId=20031052/10020254",
+      "url": "https://www.lidl.lt/c/kainu-leidiniai/s10020254?pageId=20031052/10020254"
+    },
+    {
+      "name": "parduotuviu paieska/s10025528?pageId=20031052/10025528",
+      "url": "https://www.lidl.lt/c/parduotuviu-paieska/s10025528?pageId=20031052/10025528"
+    },
+    {
+      "name": "naujienlaiskis",
+      "url": "https://www.lidl.lt/c/naujienlaiskis/s10019065"
+    },
+    {
+      "name": "piktogramu paaiskinimai",
+      "url": "https://www.lidl.lt/c/piktogramu-paaiskinimai/s10019524"
+    },
+    {
+      "name": "global blue pvm grazinimas ne es pilieciams",
+      "url": "https://www.lidl.lt/c/global-blue-pvm-grazinimas-ne-es-pilieciams/s10022629"
+    },
+    {
+      "name": "prekiu zenklai",
+      "url": "https://www.lidl.lt/c/prekiu-zenklai/s10023922"
+    },
+    {
+      "name": "lankytoju elgesio taisykles",
+      "url": "https://www.lidl.lt/c/lankytoju-elgesio-taisykles/s10019706"
+    },
+    {
+      "name": "duomenu apsauga",
+      "url": "https://www.lidl.lt/c/duomenu-apsauga/s10019066"
+    },
+    {
+      "name": "atitiktis",
+      "url": "https://www.lidl.lt/c/atitiktis/s10019086"
+    },
+    {
+      "name": "prekiu grazinimas",
+      "url": "https://www.lidl.lt/c/prekiu-grazinimas/s10023903"
+    },
+    {
+      "name": "kontaktai",
+      "url": "https://www.lidl.lt/c/kontaktai/s10023906"
+    },
+    {
+      "name": "pirkiniu krepselis",
+      "url": "https://www.lidl.lt/c/pirkiniu-krepselis/s10084037"
+    },
+    {
+      "name": "crivit",
+      "url": "https://www.lidl.lt/c/crivit/s10068913"
+    },
+    {
+      "name": "lupilu",
+      "url": "https://www.lidl.lt/c/lupilu/s10019526"
+    },
+    {
+      "name": "naujienlaiskis",
+      "url": "https://www-new.lidl.lt/c/naujienlaiskis/s10019065"
+    },
+    {
+      "name": "parduotuviu paieska",
+      "url": "https://www.lidl.lt/c/parduotuviu-paieska/s10025528"
+    },
+    {
+      "name": "best buy award",
+      "url": "https://www.lidl.lt/c/best-buy-award/s10029378"
+    },
+    {
+      "name": "prieinamumo direktyva/s10073730?pageId=10024635/10024448/10073730",
+      "url": "https://www.lidl.lt/c/prieinamumo-direktyva/s10073730?pageId=10024635/10024448/10073730"
+    },
+    {
+      "name": "svetaines duomenu apsaugos taisykles",
+      "url": "https://www.lidl.lt/c/svetaines-duomenu-apsaugos-taisykles/s10019088"
+    },
+    {
+      "name": "duomenu apsauga musu svetainese",
+      "url": "https://www.lidl.lt/c/duomenu-apsauga-musu-svetainese/s10029785"
+    }
+  ],
+  "keywordSelected": [
+    "kiti gerimai",
+    "super savaitgalis",
+    "svarbiausios sios savaites akcijos",
+    "deluxe",
+    "azijos stiliaus produktai"
+  ],
+  "keywordSkipped": [
+    "baltasis vynas",
+    "raudonasis vynas",
+    "rozinis vynas",
+    "putojantis vynas",
+    "degtine",
+    "likeriai",
+    "brendis ir viskis",
+    "ne maisto prekiu pasiulymai"
+  ]
+}

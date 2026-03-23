@@ -1,0 +1,189 @@
+@startuml Saldytuvas Plus - Komponentų Diagrama (Pagal Loginę Architektūrą)
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Komponentų Diagrama
+
+' ============================================
+' CLIENTAPP KOMPONENTAS
+' ============================================
+package "ClientApp" {
+  
+  package "Views" {
+    component [HomePage] as HomePage
+    component [LoginPage] as LoginPage
+    component [InventoryPage] as InventoryPage
+    component [ProductDetailsPage] as ProductDetailsPage
+    component [AddProductPage] as AddProductPage
+    component [ReceiptAndBudgetPage] as ReceiptAndBudgetPage
+    component [DealsPage] as DealsPage
+    component [StoreDealsPage] as StoreDealsPage
+    component [ShoppingListScreen] as ShoppingListScreen
+    component [MealPlanningPage] as MealPlanningPage
+    component [DishDetailsPage] as DishDetailsPage
+    component [AddRecipePage] as AddRecipePage
+    component [NutritionPage] as NutritionPage
+    component [ProfilePage] as ProfilePage
+    component [SettingsPage] as SettingsPage
+  }
+  
+  package "Controllers" {
+    
+    package "MemberControllers" {
+      component [RouterController] as RouterController
+      component [DashboardController] as DashboardController
+      component [AuthController] as AuthController
+      component [InventoryController] as InventoryController
+      component [ProductController] as ProductController
+      component [ProductScanController] as ProductScanController
+      component [ReceiptAndBudgetController] as ReceiptAndBudgetController
+      component [MealPlanningController] as MealPlanningController
+      component [RecipeController] as RecipeController
+      component [HealthEvaluationController] as HealthEvaluationController
+      component [DealsController] as DealsController
+      component [ShoppingListController] as ShoppingListController
+      component [ProfileController] as ProfileController
+      component [SettingsController] as SettingsController
+    }
+    
+    package "AdminControllers" {
+      component [BudgetController] as BudgetController
+      component [FamilyMembersController] as FamilyMembersController
+      component [FoodRulesController] as FoodRulesController
+      component [FoodSubstituteController] as FoodSubstituteController
+      component [InventoryAccessController] as InventoryAccessController
+      component [DealsUpdateController] as DealsUpdateController
+      component [BudgetAlertController] as BudgetAlertController
+      component [ExpirationAlertController] as ExpirationAlertController
+      component [ShoppingListController] as AdminShoppingListController
+    }
+  }
+}
+
+' ============================================
+' DOMAINMODEL KOMPONENTAS
+' ============================================
+package "DomainModel" {
+  
+  package "Entities" {
+    component [Administrator] as Administrator
+    component [Budget] as Budget
+    component [Category] as Category
+    component [Deal] as Deal
+    component [Dish] as Dish
+    component [Environment] as Environment
+    component [FoodRule] as FoodRule
+    component [Inventory] as Inventory
+    component [Member] as Member
+    component [Notification] as Notification
+    component [NutritionPlan] as NutritionPlan
+    component [Product] as Product
+    component [PromoFlyer] as PromoFlyer
+    component [Receipt] as Receipt
+    component [ReceiptLine] as ReceiptLine
+    component [Recipe] as Recipe
+    component [ShoppingList] as ShoppingList
+    component [Store] as Store
+    component [User] as User
+    
+    component [DishType] as DishType
+    component [FoodRuleStatus] as FoodRuleStatus
+    component [Gender] as Gender
+    component [MealPlanStatus] as MealPlanStatus
+    component [NotificationLevel] as NotificationLevel
+    component [StorePriority] as StorePriority
+    component [UserRole] as UserRole
+  }
+}
+
+' ============================================
+' EXTERNAL SERVICES KOMPONENTAS
+' ============================================
+package "External Services" {
+  component [CameraGalleryBoundary] as CameraGalleryBoundary
+  component [GeminiServiceBoundary] as GeminiServiceBoundary
+  component [MobileScannerBoundary] as MobileScannerBoundary
+  component [OCRServiceBoundary] as OCRServiceBoundary
+  component [OpenFoodFactsServiceBoundary] as OpenFoodFactsServiceBoundary
+  component [SpoonacularServiceBoundary] as SpoonacularServiceBoundary
+}
+
+' ============================================
+' RYŠIAI: Controllers → DomainModel
+' ============================================
+RouterController ..> DomainModel : uses
+DashboardController ..> DomainModel : uses
+AuthController ..> DomainModel : uses
+InventoryController ..> DomainModel : uses
+ProductController ..> DomainModel : uses
+ProductScanController ..> DomainModel : uses
+ReceiptAndBudgetController ..> DomainModel : uses
+MealPlanningController ..> DomainModel : uses
+RecipeController ..> DomainModel : uses
+HealthEvaluationController ..> DomainModel : uses
+DealsController ..> DomainModel : uses
+ShoppingListController ..> DomainModel : uses
+ProfileController ..> DomainModel : uses
+SettingsController ..> DomainModel : uses
+
+BudgetController ..> DomainModel : uses
+FamilyMembersController ..> DomainModel : uses
+FoodRulesController ..> DomainModel : uses
+FoodSubstituteController ..> DomainModel : uses
+InventoryAccessController ..> DomainModel : uses
+DealsUpdateController ..> DomainModel : uses
+BudgetAlertController ..> DomainModel : uses
+ExpirationAlertController ..> DomainModel : uses
+AdminShoppingListController ..> DomainModel : uses
+
+' ============================================
+' RYŠIAI: Controllers → External Services
+' ============================================
+ProductScanController ..> MobileScannerBoundary : uses
+ProductScanController ..> CameraGalleryBoundary : uses
+ProductScanController ..> OpenFoodFactsServiceBoundary : uses
+ProductScanController ..> OCRServiceBoundary : uses
+
+MealPlanningController ..> GeminiServiceBoundary : uses
+MealPlanningController ..> SpoonacularServiceBoundary : uses
+
+ReceiptAndBudgetController ..> CameraGalleryBoundary : uses
+ReceiptAndBudgetController ..> OCRServiceBoundary : uses
+
+' ============================================
+' RYŠIAI: Views → Controllers
+' ============================================
+HomePage --> DashboardController : uses
+LoginPage --> AuthController : uses
+InventoryPage --> InventoryController : uses
+ProductDetailsPage --> ProductController : uses
+AddProductPage --> ProductController : uses
+ReceiptAndBudgetPage --> ReceiptAndBudgetController : uses
+DealsPage --> DealsController : uses
+StoreDealsPage --> DealsController : uses
+ShoppingListScreen --> ShoppingListController : uses
+MealPlanningPage --> MealPlanningController : uses
+DishDetailsPage --> HealthEvaluationController : uses
+AddRecipePage --> RecipeController : uses
+NutritionPage --> HealthEvaluationController : uses
+ProfilePage --> ProfileController : uses
+SettingsPage --> SettingsController : uses
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Komponentai:**
+  - ClientApp: Flutter UI + Controllers
+  - DomainModel: Verslo logika (Entities)
+  - External Services: Išorinės paslaugos
+  
+  **Ryšiai:**
+  --> : uses (direct)
+  ..> : depends on (dashed)
+endlegend
+
+@enduml
+

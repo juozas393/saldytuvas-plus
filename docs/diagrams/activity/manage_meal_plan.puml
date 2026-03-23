@@ -1,0 +1,67 @@
+@startuml PAA9 Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+title PAA9 Valdyti mitybos planą
+
+|#FFE0B2|Šeimos administratorius|
+start
+:Atidaryti mitybos planų\nvaldymo langą;
+
+|#C8E6C9|Posistemis|
+:Rodyti esamą planą\narba generavimo formą;
+
+|#FFE0B2|Šeimos administratorius|
+:Pasirinkti veiksmą;
+
+switch (Ką daryti?)
+case (Generuoti naują planą)
+  |#FFE0B2|Šeimos administratorius|
+  :Įvesti dienų skaičių ir\npasirinkti apribojimus;
+  :Inicijuoti generavimą;
+
+  |#E1BEE7|Edge Funkcija|
+  :Gauti narių tikslus,\ninventorių ir akcijų prekes;
+  :Ieškoti receptų per\nSpoonacular API pagal\ninventoriaus produktus;
+  :Perduoti Spoonacular\nreceptus ir apribojimus\nAI (LLaMa 3) modeliui;
+  :Sugeneruoti po 3\nvariantus kiekvienam valgiui;
+  :Išversti patiekalų pavadinimus\nį lietuvių kalbą;
+
+  |#C8E6C9|Posistemis|
+  :Rodyti sugeneruotus\nvariantus po 3;
+
+  |#FFE0B2|Šeimos administratorius|
+  :Pasirinkti po 1\nvariantą kiekvienam valgiui;
+  :Patvirtinti planą;
+
+  |#E1BEE7|Duomenų bazė|
+  :Išsaugoti pasirinktus\npatiekalus (meal_plans);
+
+case (Redaguoti planą)
+  |#FFE0B2|Šeimos administratorius|
+  :Pasirinkti konkretų valgį;
+  :Pakeisti jį kitu, regeneruoti\narba pridėti ranka;
+
+  |#E1BEE7|Duomenų bazė|
+  :Atnaujinti valgio\nduomenis (meal_plans);
+
+case (Ištrinti planą)
+  |#FFE0B2|Šeimos administratorius|
+  :Patvirtinti plano ištrynimą;
+
+  |#E1BEE7|Duomenų bazė|
+  :Pažymėti planą kaip\ništrintą (deleted_at);
+
+endswitch
+
+|#C8E6C9|Posistemis|
+:Atnaujinti pirkinių sąrašą\npagal patvirtintus patiekalus;
+
+|#FFE0B2|Šeimos administratorius|
+:Rodyti sėkmės pranešimą;
+stop
+
+@enduml

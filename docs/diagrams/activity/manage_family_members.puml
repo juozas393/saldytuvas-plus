@@ -1,0 +1,45 @@
+@startuml PAA8 Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+title PAA8 Valdyti šeimos narius
+
+|#FFE0B2|Šeimos administratorius|
+start
+:Atidaryti šeimos valdymo puslapį;
+
+|#E1BEE7|Duomenų bazė|
+:Gauti šeimos narių sąrašą;
+
+|#C8E6C9|Posistemis|
+:Rodyti narių sąrašą;
+
+repeat
+  |#FFE0B2|Šeimos administratorius|
+  :Peržiūrėti narių sąrašą;
+
+  switch (Pasirinktas veiksmas?)
+  case (Pakviesti narį)
+    |#C8E6C9|Posistemis|
+    :Sugeneruoti pakvietimo kodą;
+    |#FFE0B2|Šeimos administratorius|
+    :Pasidalinti kodu su\nnorimu šeimos nariu;
+
+  case (Pašalinti narį)
+    |#FFE0B2|Šeimos administratorius|
+    :Pasirinkti narį;
+    |#C8E6C9|Posistemis|
+    :Pašalinti narį iš namų ūkio;
+    |#E1BEE7|Duomenų bazė|
+    :Atnaujinti narių sąrašą;
+
+  case (Baigti darbą)
+  endswitch
+
+repeat while (Tęsia darbą?)
+
+stop
+@enduml

@@ -1,0 +1,171 @@
+@startuml Saldytuvas Plus - Component Diagram (Faktinė Struktūra)
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Komponentų Diagrama (Faktinė Projekto Struktūra)
+
+' ============================================
+' APPLICATION ENTRY POINT
+' ============================================
+component [main.dart] as Main
+component [app.dart] as App
+
+' ============================================
+' PRESENTATION LAYER - Features/Pages
+' ============================================
+package "lib/features" {
+  
+  component [dashboard_page.dart] as DashboardPage
+  component [inventory_page.dart] as InventoryPage
+  component [meal_planner_page.dart] as MealPlannerPage
+  component [shopping_list_page.dart] as ShoppingListPage
+  component [promotions_page.dart] as PromotionsPage
+  component [profile_page.dart] as ProfilePage
+  component [receipts_page.dart] as ReceiptsPage
+  component [settings_page.dart] as SettingsPage
+  component [notification_center_page.dart] as NotificationPage
+  component [scan_page.dart] as ScanPage
+  
+  ' Tušti katalogai (planuojami)
+  component "inventory/bloc/" as InventoryBlocDir #LightGray
+  component "inventory/repositories/" as InventoryRepoDir #LightGray
+  component "inventory/widgets/" as InventoryWidgetsDir #LightGray
+  component "scan/services/" as ScanServicesDir #LightGray
+  component "scan/models/" as ScanModelsDir #LightGray
+}
+
+' ============================================
+' CORE LAYER (tušti katalogai dabar)
+' ============================================
+package "lib/core" {
+  ' Tušti katalogai (planuojami)
+  component "network/" as NetworkDir #LightGray
+  component "config/" as ConfigDir #LightGray
+  component "errors/" as ErrorsDir #LightGray
+  component "storage/models/" as StorageModelsDir #LightGray
+  component "utils/" as UtilsDir #LightGray
+  component "theme/" as CoreThemeDir #LightGray
+}
+
+' ============================================
+' SERVICES LAYER (tuščias dabar)
+' ============================================
+package "lib/services" {
+  component "services/" as ServicesDir #LightGray
+}
+
+' ============================================
+' THEME (faktinis failas)
+' ============================================
+package "lib/theme" {
+  component [app_theme.dart] as AppTheme
+}
+
+' ============================================
+' EXTERNAL DEPENDENCIES
+' ============================================
+package "External" {
+  component "flutter/material" as FlutterMaterial #LightGreen
+}
+
+' ============================================
+' RYŠIAI: Entry Point
+' ============================================
+Main --> App : runs
+
+' ============================================
+' RYŠIAI: App → Pages (faktiniai import'ai)
+' ============================================
+App --> DashboardPage : imports
+App --> InventoryPage : imports
+App --> MealPlannerPage : imports
+App --> ShoppingListPage : imports
+App --> PromotionsPage : imports
+App --> ProfilePage : imports
+App --> AppTheme : imports
+
+' ============================================
+' RYŠIAI: Pages → Other Pages (faktiniai import'ai)
+' ============================================
+DashboardPage --> InventoryPage : imports
+DashboardPage --> MealPlannerPage : imports
+DashboardPage --> NotificationPage : imports
+DashboardPage --> PromotionsPage : imports
+DashboardPage --> ReceiptsPage : imports
+DashboardPage --> ScanPage : imports
+
+ProfilePage --> ReceiptsPage : imports
+ProfilePage --> SettingsPage : imports
+
+' ============================================
+' RYŠIAI: Visi Pages → Flutter Material
+' ============================================
+DashboardPage --> "flutter/material" : imports
+InventoryPage --> "flutter/material" : imports
+MealPlannerPage --> "flutter/material" : imports
+ShoppingListPage --> "flutter/material" : imports
+PromotionsPage --> "flutter/material" : imports
+ProfilePage --> "flutter/material" : imports
+ReceiptsPage --> "flutter/material" : imports
+SettingsPage --> "flutter/material" : imports
+NotificationPage --> "flutter/material" : imports
+ScanPage --> "flutter/material" : imports
+AppTheme --> "flutter/material" : imports
+
+' ============================================
+' RYŠIAI: Planuojami (dabar tušti)
+' ============================================
+InventoryPage ..> InventoryBlocDir : will use
+InventoryPage ..> InventoryRepoDir : will use
+ScanPage ..> ScanServicesDir : will use
+ScanPage ..> ScanModelsDir : will use
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  |<#LightBlue>| Faktiniai failai (egzistuoja) |
+  |<#LightGray>| Tušti katalogai (planuojami) |
+  |<#LightGreen>| Išoriniai paketai |
+  
+  **Ryšiai:**
+  --> : imports/uses
+  ..> : planuojamas ryšys
+endlegend
+
+note right of Main
+  **Faktinė struktūra (2025-01-01):**
+  
+  **Faktiniai failai (13):**
+  - main.dart (entry point)
+  - app.dart (root widget)
+  - 10 Pages komponentų:
+    * dashboard_page.dart
+    * inventory_page.dart
+    * meal_planner_page.dart
+    * shopping_list_page.dart
+    * promotions_page.dart
+    * profile_page.dart
+    * receipts_page.dart
+    * settings_page.dart
+    * notification_center_page.dart
+    * scan_page.dart
+  - theme/app_theme.dart
+  
+  **Faktiniai ryšiai:**
+  - App importuoja 6 pages + theme/app_theme.dart
+  - DashboardPage importuoja 5 pages (navigacija)
+  - ProfilePage importuoja 2 pages
+  - Visi naudoja Flutter Material
+  
+  **Planuojami katalogai (tušti):**
+  - features/*/bloc/ (BLoC state management)
+  - features/*/repositories/ (data access)
+  - core/network/, config/, errors/ (infrastructure)
+  - services/ (business logic)
+end note
+
+@enduml
+

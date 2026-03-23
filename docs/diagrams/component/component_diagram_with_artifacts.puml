@@ -1,0 +1,147 @@
+@startuml Saldytuvas Plus - Komponentų Diagrama su Artifacts
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Komponentų Diagrama su Artifacts
+
+' ============================================
+' PAGRINDINIAI KOMPONENTAI SU REALIZACIJOMIS
+' ============================================
+
+component "ClientApp" <<component>> as ClientApp {
+  ' Realizations (Views)
+  [HomePage]
+  [InventoryPage]
+  [MealPlanningPage]
+  [ShoppingListPage]
+  [PromotionsPage]
+  [ProfilePage]
+  [ReceiptsPage]
+  [SettingsPage]
+  [NotificationPage]
+  [ScanPage]
+  
+  ' Realizations (Controllers)
+  [DashboardController]
+  [InventoryController]
+  [MealPlanningController]
+  [ShoppingListController]
+  [PromotionsController]
+  [AuthController]
+  [ProfileController]
+  [ReceiptController]
+  [SettingsController]
+  [ProductScanController]
+}
+
+component "External services" <<component>> as ExternalServices {
+  ' Realizations
+  [CameraGalleryBoundary]
+  [GeminiServiceBoundary]
+  [MobileScannerBoundary]
+  [OCRServiceBoundary]
+  [OpenFoodFactsServiceBoundary]
+  [SpoonacularServiceBoundary]
+}
+
+component "DomainApp" <<component>> as DomainApp {
+  ' Realizations (Entities)
+  [Product]
+  [MealPlan]
+  [ShoppingList]
+  [Receipt]
+  [Deal]
+  [User]
+  [Budget]
+  [Notification]
+  [Recipe]
+  [Dish]
+  [Category]
+  [Store]
+  [PromoFlyer]
+  [Inventory]
+  [Environment]
+  [FoodRule]
+  [Member]
+  [Administrator]
+  [NutritionPlan]
+}
+
+component "FridgeDB" <<component>> as FridgeDB
+
+' ============================================
+' ARTIFACTS (Fiziniai failai - Flutter)
+' ============================================
+
+artifact "clientPages/*.dart" as ClientPagesArtifact
+artifact "clientControllers/*.dart" as ClientControllersArtifact
+artifact "app.dart" as AppArtifact
+artifact "main.dart" as MainArtifact
+artifact "theme.dart" as ThemeArtifact
+
+artifact "models/*.dart" as ModelsArtifact
+artifact "services/*.dart" as ServicesArtifact
+artifact "repositories/*.dart" as RepositoriesArtifact
+
+artifact "migrations/*.sql" as MigrationsArtifact
+artifact "database.ddl" as DatabaseDdlArtifact
+
+' ============================================
+' RYŠIAI: Komponentai → Artifacts (manifest)
+' ============================================
+ClientApp ..> ClientPagesArtifact <<manifest>>
+ClientApp ..> ClientControllersArtifact <<manifest>>
+ClientApp ..> AppArtifact <<manifest>>
+ClientApp ..> MainArtifact <<manifest>>
+ClientApp ..> ThemeArtifact <<manifest>>
+
+DomainApp ..> ModelsArtifact <<manifest>>
+DomainApp ..> ServicesArtifact <<manifest>>
+DomainApp ..> RepositoriesArtifact <<manifest>>
+
+FridgeDB ..> MigrationsArtifact <<manifest>>
+FridgeDB ..> DatabaseDdlArtifact <<manifest>>
+
+' ============================================
+' RYŠIAI: Artifacts → Artifacts (use dependencies)
+' ============================================
+MainArtifact ..> AppArtifact <<use>>
+AppArtifact ..> ClientPagesArtifact <<use>>
+AppArtifact ..> ThemeArtifact <<use>>
+ClientPagesArtifact ..> ClientControllersArtifact <<use>>
+ClientControllersArtifact ..> ModelsArtifact <<use>>
+ClientControllersArtifact ..> ServicesArtifact <<use>>
+ServicesArtifact ..> ModelsArtifact <<use>>
+ServicesArtifact ..> RepositoriesArtifact <<use>>
+RepositoriesArtifact ..> ModelsArtifact <<use>>
+RepositoriesArtifact ..> MigrationsArtifact <<use>>
+RepositoriesArtifact ..> DatabaseDdlArtifact <<use>>
+
+' ============================================
+' RYŠIAI: Komponentai → Komponentai (use dependencies)
+' ============================================
+ClientApp ..> ExternalServices <<use>>
+ClientApp ..> DomainApp <<use>>
+DomainApp ..> FridgeDB <<use>>
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Komponentai:**
+  - ClientApp: Flutter UI + Controllers
+  - External services: Išorinės paslaugos
+  - DomainApp: Verslo logika (Entities)
+  - FridgeDB: Duomenų bazė
+  
+  **Artifacts:**
+  - Fiziniai failai (*.dart, *.sql, *.yaml)
+  
+  **Ryšiai:**
+  ..> <<use>> : naudoja
+  ..> <<manifest>> : manifestuoja (fizinis failas)
+endlegend
+
+@enduml

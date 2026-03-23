@@ -1,0 +1,192 @@
+@startuml Manage Products Schema - Simple
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Schema - Valdyti produktus (Paprasta versija)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' UI BOUNDARIES (Langai) - Kas yra boundary?
+' ============================================
+rectangle "Inventoriaus langas\n(Produktų sąrašas)" <<boundary>> as InventoryPage
+rectangle "Produkto pridėjimo langas\n(Forma)" <<boundary>> as AddProductPage
+rectangle "Produkto kortelės langas\n(Detalės/Redagavimas)" <<boundary>> as ProductDetailPage
+
+' ============================================
+' CONTROLLER (Flutter BLoC) - Verslo logika
+' ============================================
+rectangle "InventoryBloc\n(BLoC Controller)" <<control>> as InventoryBloc
+
+' ============================================
+' EXTERNAL BOUNDARIES (Išorinės sistemos)
+' ============================================
+rectangle "Supabase API\n(Duomenų bazė)" <<boundary>> as Supabase
+rectangle "Open Food Facts API\n(Produktų duomenys)" <<boundary>> as OpenFoodAPI
+rectangle "Mobile Scanner\n(Barcode skaitymas)" <<boundary>> as BarcodeScanner
+rectangle "Image Picker\n(Kamera + Galerija)" <<boundary>> as ImagePicker
+
+' ============================================
+' ENTITIES (Duomenų modeliai)
+' ============================================
+rectangle "Product\n(Produktas)" <<entity>> as Product
+rectangle "InventoryItem\n(Inventoriaus elementas)" <<entity>> as InventoryItem
+
+' ============================================
+' PAGRINDINĖS SĄVEIKOS
+' ============================================
+
+' 1. Peržiūrėti produktus
+User --> InventoryPage : "Paspausti Peržiūrėti produktus"
+InventoryPage --> InventoryBloc : įvykis: LoadProductsEvent
+InventoryBloc --> Supabase : užklausa: gauti produktus
+Supabase --> InventoryBloc : atsakas: produktų sąrašas
+InventoryBloc --> InventoryPage : būsena: ProductsLoadedState
+InventoryPage --> User : rodo produktų sąrašą
+
+' 2. Pridėti produktą rankiniu būdu
+User --> InventoryPage : "Paspausti Pridėti produktą"
+InventoryPage --> AddProductPage : naviguoja į pridėjimo langą
+User --> AddProductPage : "Suvesti produkto informaciją" (forma)
+AddProductPage --> InventoryBloc : įvykis: AddProductEvent
+InventoryBloc --> Product : sukuria Product objektą
+InventoryBloc --> InventoryItem : sukuria InventoryItem objektą
+InventoryBloc --> Supabase : užklausa: įrašyti produktą
+Supabase --> InventoryBloc : atsakas: sėkmė
+InventoryBloc --> AddProductPage : būsena: ProductAddedState
+AddProductPage --> User : rodo sėkmės pranešimą
+
+' 3. Pridėti produktą pagal barcode
+User --> AddProductPage : "Paspausti Nuskaityti barkodą"
+AddProductPage --> BarcodeScanner : atidaro barcode scanner'į
+BarcodeScanner --> AddProductPage : grąžina barcode (pvz., 5901234123457)
+AddProductPage --> InventoryBloc : įvykis: ScanBarcodeEvent(barcode)
+InventoryBloc --> OpenFoodAPI : HTTP užklausa: gauti produkto duomenis
+OpenFoodAPI --> InventoryBloc : atsakas: produkto duomenys (JSON)
+InventoryBloc --> Product : sukuria Product iš API duomenų
+InventoryBloc --> AddProductPage : būsena: ProductScannedState
+AddProductPage --> User : rodo automatiškai užpildytą formą
+
+' 4. Pridėti produktą iš čekio nuotraukos
+User --> AddProductPage : "Paspausti Nufotografuoti čekį"
+AddProductPage --> ImagePicker : atidaro kamerą arba galeriją
+ImagePicker --> AddProductPage : grąžina nuotrauką
+AddProductPage --> InventoryBloc : įvykis: ProcessReceiptImageEvent
+' (OCR + Gemini procesas būtų čia, bet MVP paliekame)
+InventoryBloc --> Supabase : užklausa: įrašyti produktą
+Supabase --> InventoryBloc : atsakas: sėkmė
+InventoryBloc --> AddProductPage : būsena: ProductAddedState
+
+' 5. Redaguoti produktą
+User --> InventoryPage : paspaudžia ant produkto kortelės
+InventoryPage --> ProductDetailPage : naviguoja į produkto detalės langą
+User --> ProductDetailPage : "Paspausti Redaguoti"
+ProductDetailPage --> InventoryBloc : įvykis: UpdateProductEvent
+InventoryBloc --> Product : atnaujina Product objektą
+InventoryBloc --> InventoryItem : atnaujina InventoryItem objektą
+InventoryBloc --> Supabase : užklausa: atnaujinti produktą
+Supabase --> InventoryBloc : atsakas: sėkmė
+InventoryBloc --> ProductDetailPage : būsena: ProductUpdatedState
+ProductDetailPage --> User : rodo sėkmės pranešimą
+
+' 6. Ištrinti produktą
+User --> ProductDetailPage : "Paspausti Ištrinti"
+ProductDetailPage --> InventoryBloc : įvykis: DeleteProductEvent
+InventoryBloc --> Supabase : užklausa: ištrinti produktą
+Supabase --> InventoryBloc : atsakas: sėkmė
+InventoryBloc --> ProductDetailPage : būsena: ProductDeletedState
+ProductDetailPage --> InventoryPage : naviguoja atgal
+InventoryBloc --> InventoryPage : būsena: ProductsUpdatedState
+InventoryPage --> User : rodo atnaujintą sąrašą
+
+' ============================================
+' RYŠIAI - Controller → Entity
+' ============================================
+InventoryBloc --> Product : valdo Product objektą
+InventoryBloc --> InventoryItem : valdo InventoryItem objektą
+
+' ============================================
+' RYŠIAI - Controller → External Boundaries
+' ============================================
+InventoryBloc --> Supabase : CRUD operacijos
+InventoryBloc --> OpenFoodAPI : produkto duomenys
+InventoryBloc --> BarcodeScanner : barcode skenavimas
+InventoryBloc --> ImagePicker : nuotraukų gavimas
+
+' ============================================
+' PASTABOS
+' ============================================
+note right of InventoryBloc
+  **InventoryBloc** (Flutter BLoC):
+  - Valdo VISĄ inventory funkcionalumą
+  - Valdo Product + InventoryItem entity
+  - Koordinuoja ryšius su išorinėmis sistemomis
+end note
+
+note right of Product
+  **Product** (Entity):
+  - Produkto duomenys (pavadinimas, kategorija)
+  - Immutable modelis
+  - Naudoja copyWith metodą
+end note
+
+note right of InventoryItem
+  **InventoryItem** (Entity):
+  - Inventoriaus elemento duomenys
+  - Kiekis, galiojimo data, vieta
+  - Susijęs su Product
+end note
+
+note bottom
+  **SCHEMA SANTRAUKA:**
+  
+  **Boundaries (3 UI + 4 External):**
+  - UI: InventoryPage, AddProductPage, ProductDetailPage
+  - External: Supabase, OpenFoodAPI, BarcodeScanner, ImagePicker
+  
+  **Controller (1):**
+  - InventoryBloc (Flutter BLoC)
+  
+  **Entities (2):**
+  - Product, InventoryItem
+  
+  **Srautai (6):**
+  - Peržiūrėti, Pridėti ranka, Pridėti barcode, 
+  - Pridėti iš nuotraukos, Redaguoti, Ištrinti
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

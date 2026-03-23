@@ -1,0 +1,35 @@
+{
+    "name": "saldytuvas-scraper",
+    "version": "1.0.0",
+    "description": "Universal grocery store deals scraper for Lithuanian stores",
+    "main": "dist/index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "tsx src/index.ts",
+        "dev:lidl": "tsx src/index.ts --store=lidl",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "scrape:lidl": "tsx src/adapters/lidl/run.ts",
+        "scrape:iki": "tsx src/adapters/iki/run.ts",
+        "scrape:rimi": "tsx src/adapters/rimi/run.ts",
+        "scrape:norfa": "tsx src/adapters/norfa/run.ts",
+        "scrape:akcijos": "tsx src/adapters/akcijos-lt/run.ts",
+        "scrape:all": "tsx src/adapters/akcijos-lt/run.ts"
+    },
+    "dependencies": {
+        "@google/genai": "^1.41.0",
+        "@google/generative-ai": "^0.24.1",
+        "@supabase/supabase-js": "^2.39.0",
+        "cheerio": "^1.0.0-rc.12",
+        "dotenv": "^16.3.1",
+        "groq-sdk": "^0.37.0",
+        "playwright": "^1.41.0",
+        "playwright-extra": "^4.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "tsx": "^4.7.0",
+        "typescript": "^5.3.3"
+    }
+}

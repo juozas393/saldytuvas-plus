@@ -1,0 +1,436 @@
+@startuml Receipt Scanning Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+
+title Nuskanuoti čeki - Activity Diagram
+
+|#FFE0B2|Šeimos narys|
+start
+:Paspausti mygtuką\n„Nuskaityti kvitą";
+
+|#FFE0B2|
+if ([nori pasirinkti čekį iš galerijos]?) then (Taip)
+  :Paspausti mygtuką\n"Galerija";
+  
+  |#C8E6C9|Posistemis|
+  if ([nori suteikti leidimą\nnaudotis galerija]?) then (Taip)
+    :Suteikti leidimą\nnaudotis galerija;
+    :Atidaryti galeriją;
+    |#FFE0B2|Šeimos narys|
+    :Pasirinkti nuotrauką;
+  else (Ne)
+    :Pateikti leidimo naudotis\ngalerija langą;
+    :Atidaryti galeriją;
+    |#FFE0B2|Šeimos narys|
+    :Pasirinkti nuotrauką;
+  endif
+  
+else ([nori nufotografuoti čeki]?)
+  :Paspausti mygtuką\n"Atidaryti kamerą";
+  
+  |#C8E6C9|Posistemis|
+  if ([suteikta leidimas]?) then (Taip)
+    :Duoti leidimą naudotis kamera;
+    :Atidaryti kamerą;
+    |#FFE0B2|Šeimos narys|
+    :Nufotografuoti čeki;
+  else (Ne)
+    :Pateikti leidimo langą\nnaudotis kamera;
+    :Atidaryti kamerą;
+    |#FFE0B2|Šeimos narys|
+    :Nufotografuoti čeki;
+  endif
+  
+else ([rankinis įvedimas]?)
+  :Suvesti produktų informaciją;
+  :Užpildyti visus produkto laukus;
+  stop
+endif
+
+|#C8E6C9|Posistemis|
+:Gauti nuotrauką\n(File objektas);
+
+partition "Automatizuotas paveikslėlio apdorojimas" {
+  |#C8E6C9|ImageProcessingService\n(lib/features/scan/services/)|
+  note right: IMPLEMENTACIJA VIETA:\nlib/features/scan/services/\n  image_processing_service.dart\n\nVEIKSMAS:\n• Lokaliai sistemoje (Flutter app)\n• Naudojant Dart paketus\n• Automatiškai, be vartotojo\n• Pagerina OCR tikslumą
+  
+  :Nuskaityti File į atmintį\n(File → Uint8List → Image);
+  
+  :Apskaičiuoti DPI ekvivalentą;
+  
+  if (DPI < 300?) then (Taip)
+    :Išplėsti Image objektą\n(interpolation);
+  endif
+  
+  :Konvertuoti į grayscale;
+  :Apskaičiuoti brightness;
+  :Taikyti adaptive threshold;
+  :Pašalinti triukšmą;
+  :Smoothening;
+  
+  :Konvertuoti Image atgal į File;
+  :Išsaugoti apdorotą vaizdą\n(temp/receipt_processed.jpg);
+  
+  |#C8E6C9|Posistemis|
+  :Gauti apdorotą nuotrauką;
+}
+
+partition "OCR apdorojimas (Isolate)" {
+  |#C8E6C9|OCRService\n(lib/features/scan/services/)|
+  :Paleisti OCR procesą\ncompute() → Isolate;
+  note right: KODĖL OCR pirmiausia?\n• Lokali veikla (nemokama)\n• Greitesnė nei API\n• Veikia offline\n• Mažesni kaštai
+  
+  |#FFF9C4|Tesseract OCR\n(lokali sistema)|
+  :Skenuoti nuotrauką\ngauti tekstą (kalbos: lit, eng, rus);
+  
+  |#C8E6C9|Posistemis|
+  :Gauti OCR rezultatą:\nocrText, lines, confidence;
+  
+  :Normalizuoti tekstą\n(whitespace, valiutos simboliai);
+  
+  :Patikrinti ar tai čekis\n(struktūriniai požymiai):
+  - Parduotuvės pavadinimas\n- Data formatas\n- Kainų formatas\n- "TOTAL" / "IŠ VISO";
+  note right: Lokalus patikrinimas\n(be API kvietimų)\nJei nepavyko →\nvis tiek bandome Gemini
+  
+  if (OCR tekstas tuščias\narba confidence < 0.5?) then (Taip)
+    :Loguoti warning:\n"OCR nepavyko";
+    :Pažymėti: ocr_failed = true;
+  else (Ne)
+    :OCR sėkmingas;
+    :Pažymėti: ocr_failed = false;
+  endif
+}
+
+partition "Gemini API (produktų parsavimas iš teksto)" {
+  |#C8E6C9|ReceiptParsingService\n(lib/features/scan/services/)|
+  :Inicializuoti kintamuosius:\nproducts = []\nproduktai_rasti = false;
+  
+  note right: ============================================\nŠAKA: OCR sėkmingas arba ne?\n============================================
+  
+  if (ocr_failed == true?) then (Taip)
+    note right: SCENARIJUS D1:\nOCR nepavyko → Gemini Vision fallback
+    |#FFCCBC|Gemini Vision API\n(fallback)|
+    :Analizuoti nuotrauką tiesiogiai\n(OCR nepavyko);
+    note right: FALLBACK:\nJei OCR nepavyko,\nnaudojame Gemini Vision
+  else (Ne)
+    note right: SCENARIJUS D2:\nOCR sėkmingas → Gemini Text parsing
+    |#FFCCBC|Gemini API\n(Gemini Pro - Text)|
+    :Analizuoti OCR tekstą\ngauti produktus (JSON);
+    note right: OPTIMIZACIJA:\nGemini text parsing\npigiau nei Vision API\n(mažiau tokens)
+  endif
+  
+  |#C8E6C9|Posistemis|
+  :Gauti JSON nuo Gemini:\nproducts, store, totalAmount;
+  :Validuoti JSON struktūrą;
+  
+  note right: ============================================\nŠAKA: JSON validus arba ne?\n============================================
+  
+  if (JSON validus\nir produktai JSON'e?) then (Taip)
+    note right: SCENARIJUS E1:\nJSON validus → produktai pridėti
+    :Konvertuoti JSON produktus\nį Product objektus;
+    :Pridėti produktus į sąrašą\nsu confidence = 0.8;
+    :Pažymėti: produktai_rasti = true;
+    note right: ✅ Produktai sėkmingai pridėti\nĮ sąrašą. Sąrašas NĖRA tuščias.\n→ Tęsti į "Rezultatų validacija"
+  else (Ne)
+    note right: SCENARIJUS E2:\nJSON invalidus arba Gemini klaida
+    note right: Galimi atvejai:\n1. Gemini API klaida (timeout, network)\n2. JSON struktūra neteisinga\n3. JSON neturi "products" lauko\n4. JSON "products" tuščias masyvas []
+    
+    :Gemini nepavyko gauti produktų\narba JSON invalidus;
+    :Loguoti klaidos pranešimą:\n"Gemini parsing failed";
+    
+    :Pažymėti: produktai_rasti = false;
+    :Sąrašas lieka tuščias\n(products = []);
+    
+    note right: ❌ Produktai NEPRIDĖTI.\nSąrašas tuščias.\n→ Tęsti į "Rezultatų validacija"\n(rankinis įvedimas)
+    note right: Ką daryti toliau?\n→ Eiti į 152 eilutę:\nif (produktai_rasti == false)\n→ Rodyti "Įvesti ranka"
+  endif
+}
+
+partition "Rezultatų validacija, redagavimas ir vartotojo patvirtinimas" {
+  |#C8E6C9|Posistemis|
+  
+  note right: ============================================\nŠAKA 1: Ar produktai rasti?\n============================================
+  
+  if (produktai_rasti == false\narba produktų sąrašas tuščias?) then (Taip)
+    note right: SCENARIJUS A:\nGemini nepavyko gauti produktų
+    |#FFE0B2|Šeimos narys|
+    :Rodyti perspėjimą:\n"Produktai nebuvo aptikti.\nPrašome įvesti ranka";
+    :Parodyti mygtukus:\n"Įvesti ranka" / "Atšaukti";
+    
+    note right: ============================================\nŠAKA 2: Ar vartotojas įveda ranka?\n============================================
+    
+    if ([vartotojas paspaudė\n"Įvesti ranka"]?) then (Taip)
+      note right: SCENARIJUS A1:\nRankinis įvedimas
+      |#C8E6C9|Posistemis|
+      :Inicializuoti tuščią produktų sąrašą\nproducts = [];
+      
+      note right: ============================================\nŠAKA: Kaip įvesti produktą?\n============================================
+      
+      if ([vartotojas paspaudė\n"Nuskaityti barcode" mygtuką]?) then (Taip)
+        note right: SCENARIJUS A1A:\nBarcode skaitymas
+        |#C8E6C9|BarcodeScannerService\n(lib/features/scan/services/)|
+        :Atidaryti barcode skaitytuvą\n(mobile_scanner);
+        |#FFE0B2|Šeimos narys|
+        :Nuskaityti barcode\n(kamera);
+        
+        |#C8E6C9|Posistemis|
+        :Gauti barcode reikšmę;
+        :Validuoti barcode\n(checksum algoritmas);
+        
+        if (Barcode validus?) then (Taip)
+          |#E1BEE7|Supabase DB\n(products lentelė)|
+          :Ieškoti produkto pagal barcode\nSELECT * FROM products\nWHERE barcode = ?;
+          
+          |#C8E6C9|Posistemis|
+          if (Produktas rastas DB?) then (Taip)
+            note right: SCENARIJUS A1A1:\nProduktas rastas → auto užpildymas
+            :Gauti produkto duomenis:\nname, category, nutrition_info;
+            :Automatiškai užpildyti formą:\npavadinimas, kategorija, nutrition_info;
+            |#FFE0B2|Šeimos narys|
+            :Suvesti tik kiekį ir kainą\n(privalomi laukai);
+            |#C8E6C9|Posistemis|
+            :Sukurti Product objektą su barcode\n(confidence = 0.9);
+            :Pridėti produktą į sąrašą\nproducts.add(product);
+          else (Ne)
+            note right: SCENARIJUS A1A2:\nProduktas nerastas DB
+            :Rodyti perspėjimą:\n"Produktas nerastas duomenų bazėje";
+            |#FFE0B2|Šeimos narys|
+            :Suvesti visą informaciją ranka:\npavadinimas, kiekis, kaina, kategorija;
+            |#C8E6C9|Posistemis|
+            :Sukurti Product objektą su barcode\n(confidence = 0.5);
+            :Pridėti produktą į sąrašą\nproducts.add(product);
+          endif
+        else (Ne)
+          note right: SCENARIJUS A1A3:\nBarcode invalidus
+          :Rodyti klaidos pranešimą:\n"Netinkamas barcode formatas";
+          |#FFE0B2|Šeimos narys|
+          :Suvesti visą informaciją ranka;
+          |#C8E6C9|Posistemis|
+          :Sukurti Product objektą be barcode\n(confidence = 0.5);
+          :Pridėti produktą į sąrašą\nproducts.add(product);
+        endif
+      else (Ne)
+        note right: SCENARIJUS A1B:\nVisiškai rankinis įvedimas
+        |#FFE0B2|Šeimos narys|
+        :Suvesti produkto informaciją ranka:\npavadinimas, kiekis, kaina, kategorija;
+        :Užpildyti visus produkto laukus;
+        |#C8E6C9|Posistemis|
+        :Sukurti Product objektą be barcode\n(confidence = 0.5);
+        :Pridėti produktą į sąrašą\nproducts.add(product);
+      endif
+      
+      note right: ✅ Produktas pridėtas į sąrašą\n→ Tęsti į bendrą redagavimo ciklą\n(visi produktai viename sąraše)
+    else (Ne)
+      note right: SCENARIJUS A2:\nVartotojas atšaukia
+      :Užbaigti procesą;
+      stop
+    endif
+  else (Ne)
+    note right: SCENARIJUS B:\nGemini sėkmingai gavo produktus\nproduktai_rasti = true
+    |#C8E6C9|Posistemis|
+    :Gauti produktus iš Gemini sąrašo\nproducts (iš sąrašo);
+    :Apskaičiuoti bendrą\nconfidence (vidurkis);
+    note right: ✅ Produktai gauti iš Gemini\n→ Tęsti į bendrą redagavimo ciklą\n(visi produktai viename sąraše)
+  endif
+  
+  |#C8E6C9|Posistemis|
+  :Sukurti ReceiptParsingResult:\nproducts, store, totalAmount, confidence;
+  
+  |#FFE0B2|Šeimos narys|
+  :Rodyti produktų sąrašą\n(UI su confidence indikatoriais);
+  note right: ✅ BENDRA VIETA:\nVisos produktai (automatiškai arba rankiniu būdu)\nvaldomi per VIENĄ ciklą
+  
+  note right: ============================================\nCIKLAS: Vartotojo veiksmai su sąrašu\n============================================
+  
+  repeat
+    |#FFE0B2|Šeimos narys|
+    :Peržiūrėti produktų sąrašą;
+    
+    note right: ============================================\nŠAKA: Ką vartotojas nori daryti?\n============================================
+    
+    if ([vartotojas paspaudė\n"Redaguoti produktą" ant konkretaus produkto]?) then (Taip)
+      note right: SCENARIJUS C1:\nRedaguoti konkretų produktą
+      |#C8E6C9|Posistemis|
+      :Atidaryti produkto redagavimo langą\n(concreteProduct);
+      |#FFE0B2|Šeimos narys|
+      :Redaguoti produkto informaciją:\npavadinimas, kiekis, kaina, kategorija;
+      |#C8E6C9|Posistemis|
+      :Gauti redaguotus duomenis;
+      :Atnaujinti produktą sąraše\n(ReceiptParsingResult.products);
+      note right: ✅ Produktas atnaujintas\n→ Grįžti į ciklą (peržiūrėti sąrašą)
+    else ([vartotojas paspaudė\n"Šalinti produktą" ant konkretaus produkto]?)
+      note right: SCENARIJUS C2:\nŠalinti konkretų produktą
+      |#C8E6C9|Posistemis|
+      :Rodyti patvirtinimo dialogą:\n"Ar tikrai norite pašalinti\n[pavadinimas]?";
+      |#FFE0B2|Šeimos narys|
+      if ([vartotojas patvirtino\nšalinimą]?) then (Taip)
+        |#C8E6C9|Posistemis|
+        :Pašalinti produktą iš sąrašo\n(ReceiptParsingResult.products.remove);
+        note right: ✅ Produktas pašalintas\n→ Grįžti į ciklą (peržiūrėti sąrašą)
+      else (Ne)
+        note right: Vartotojas atšaukė\n→ Grįžti į ciklą be pakeitimų
+      endif
+    else ([vartotojas paspaudė\n"Pridėti produktą"]?)
+      note right: SCENARIJUS C3:\nPridėti naują produktą (tą pačią logiką\nkaip rankiniu būdu įvedant)
+      |#C8E6C9|Posistemis|
+      :Atidaryti produkto pridėjimo formą;
+      
+      if ([vartotojas paspaudė\n"Nuskaityti barcode" mygtuką]?) then (Taip)
+        note right: C3A: Barcode skaitymas\n(tokia pat logika kaip SCENARIJUS A1A)
+        |#C8E6C9|BarcodeScannerService|
+        :Atidaryti barcode skaitytuvą;
+        |#FFE0B2|Šeimos narys|
+        :Nuskaityti barcode;
+        |#C8E6C9|Posistemis|
+        :Validuoti barcode;
+        
+        if (Barcode validus ir rastas DB?) then (Taip)
+          :Automatiškai užpildyti formą;
+          |#FFE0B2|Šeimos narys|
+          :Suvesti tik kiekį ir kainą;
+          |#C8E6C9|Posistemis|
+          :Sukurti Product su barcode\n(confidence = 0.9);
+        else (Ne)
+          |#FFE0B2|Šeimos narys|
+          :Suvesti visą informaciją ranka;
+          |#C8E6C9|Posistemis|
+          :Sukurti Product (confidence = 0.5);
+        endif
+      else (Ne)
+        note right: C3B: Visiškai rankinis įvedimas
+        |#FFE0B2|Šeimos narys|
+        :Suvesti produkto informaciją ranka:\npavadinimas, kiekis, kaina, kategorija;
+        |#C8E6C9|Posistemis|
+        :Sukurti Product (confidence = 0.5);
+      endif
+      
+      |#C8E6C9|Posistemis|
+      :Pridėti produktą į sąrašą\n(ReceiptParsingResult.products.add);
+      note right: ✅ Produktas pridėtas\n→ Grįžti į ciklą (peržiūrėti sąrašą)
+    else ([vartotojas paspaudė\n"Baigti redagavimą" / "Patvirtinti"]?)
+      note right: SCENARIJUS C4:\nVartotojas užbaigia redagavimą\n(išeina iš ciklo)
+      |#C8E6C9|Posistemis|
+      :Atnaujinti ReceiptParsingResult\nsu galutiniais duomenimis;
+      note right: ✅ Ciklas baigtas\n→ Išeiti iš ciklo
+    endif
+  repeat while ([vartotojas DAR NEBALIGIA\nredagavimo]?)
+  
+  note right: ✅ VISI produktai (ir automatiškai, ir rankiniu būdu)\nvaldomi per VIENĄ ciklą\n→ Tęsti į patvirtinimą į biudžetą
+  
+  |#FFE0B2|Šeimos narys|
+  :Peržiūrėti produktų sąrašą\n(final versija);
+  :Pažymėti produktus\nį atsargas (checkbox);
+  :Patvirtinti visą čeki\nį biudžetą;
+  
+  |#C8E6C9|Posistemis|
+  :Gauti pasirinkimą:\nselectedProducts, addToInventory, receiptData;
+  note right: → Tęsti į toliau:\n"Open Food Facts"
+}
+
+partition "Papildoma produkto informacija (Open Food Facts)" {
+  note right: ============================================\nŠAKA: Trūksta nutrition_info?\n============================================
+  
+  :Patikrinti ar trūksta\nnutrition_info produktams;
+  
+  if (Trūksta nutrition_info?) then (Taip)
+    note right: SCENARIJUS F1:\nTrūksta info → ieškoti Open Food Facts
+    |#FFCCBC|Open Food Facts API|
+    :Ieškoti produkto pagal pavadinimą\n(produkto pavadinimas);
+    
+    |#C8E6C9|Posistemis|
+    if (Duomenys rasti?) then (Taip)
+      note right: SCENARIJUS F1A:\nDuomenys rasti → atnaujinti
+      :Atnaujinti nutrition_info\nproduktams:
+      - Kalorijos per 100g
+      - Makroelementai (b, r, a)
+      - Vitaminai, mineralai;
+    else (Ne)
+      note right: SCENARIJUS F1B:\nDuomenys nerasti arba API klaida
+      :Loguoti warning:\n"Open Food Facts nerasta\nprodukto: [pavadinimas]";
+      :Palikti produkto objektą\nbe nutrition_info\n(arba su tuščia info);
+      note right: ✅ Produktas vis tiek bus įrašytas\nį Supabase, tik be nutrition_info.\nSistema TĘSIA su kitais veiksmais.
+    endif
+  else (Ne)
+    note right: SCENARIJUS F2:\nNutrition info jau yra\n(Gemini arba anksčiau rasta)\n(praleisti Open Food Facts)
+  endif
+  
+  note right: → Tęsti į toliau:\n"Duomenų įrašymas į Supabase"\n(neatžvelgiant ar nutrition_info rasta)
+}
+
+partition "Duomenų įrašymas į Supabase" {
+  note right: ============================================\nŠAKA: Produktai į atsargas?\n============================================
+  
+  if (Pažymėti produktai\nį atsargas?) then (Taip)
+    note right: SCENARIJUS G1:\nProduktai pažymėti → įrašyti į inventory
+    
+    partition "Produktų suliejimas (matching)" {
+      :Kiekvienam produktui iš čekio:\nPatikrinti ar jau egzistuoja\ninventory_items lentelėje;
+      note right: Matching kriterijai:\n• Pavadinimas (fuzzy match)\n• Barcode (jei yra)\n• Kategorija
+      
+      |#E1BEE7|Supabase\nInventory|
+      :Ieškoti panašių produktų\nSELECT * FROM inventory_items\nWHERE name LIKE '%...%'\nOR barcode = ?;
+      
+      |#C8E6C9|Posistemis|
+      :Gauti rastus produktus\n(ar jų nėra);
+      
+      note right: ============================================\nŠAKA: Produktas rastas arba ne?\n============================================
+      
+      if (Rastas panašus produktas\ninventory_items?) then (Taip)
+        note right: SCENARIJUS H1:\nProduktas jau egzistuoja → sulieti
+        :Sulieti produktus:\n- Atnaujinti kiekį\n  (esamas_kiekis + naujas_kiekis)\n- Atnaujinti galiojimo datą\n  (jei nauja vėlesnė);
+        :Pažymėti: produktas sulietas\n(ne sukurtas naujas);
+        note right: UPDATE inventory_items\nSET quantity = quantity + ?,\nexpires_at = GREATEST(...)
+      else (Ne)
+        note right: SCENARIJUS H2:\nProduktas naujas → sukurti
+        :Sukurti naują inventory_item\nsu produkto duomenimis:
+        - name, quantity, price
+        - category, nutrition_info
+        - expires_at (jei nurodyta);
+        :Pažymėti: produktas sukurtas;
+        note right: INSERT INTO inventory_items\nVALUES (...)
+      endif
+    }
+    
+    |#E1BEE7|Supabase\nInventory|
+    :Vykdyti INSERT arba UPDATE\n(priklausomai nuo matching);
+    
+    |#C8E6C9|Posistemis|
+    :Gauti inventory_ids\n(arba updated inventory_ids);
+  else (Ne)
+    note right: SCENARIJUS G2:\nProduktai NEPAŽYMĖTI\n(praleisti inventory)
+  endif
+  
+  note right: Visada įrašome čeki į biudžetą\n(neatžvelgiant į inventory)
+  
+  |#E1BEE7|Supabase\nBudget|
+  :Įrašyti čeki į receipts\nir atnaujinti budget_summary;
+  
+  |#C8E6C9|Posistemis|
+  :Gauti receipt_id;
+}
+
+partition "Užbaigimas" {
+  if (Vartotojas patvirtino\nišsaugoti nuotrauką?) then (Ne)
+    :Ištrinti apdorotą nuotrauką;
+    :Ištrinti originalią nuotrauką\n(jei temp);
+  else (Taip)
+    :Išsaugoti nuotrauką\n(encrypted storage);
+  endif
+  
+  :Loguoti tik receiptId,\nstore, totalAmount;
+  
+  |#FFE0B2|Šeimos narys|
+  :Rodyti "✅ Čekis pridėtas";
+  :Atidaryti čekio kortelę;
+  
+  |#C8E6C9|Posistemis|
+  :Atnaujinti UI\n(biudžeto diagrama);
+}
+
+stop
+
+@enduml

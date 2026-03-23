@@ -1,0 +1,290 @@
+@startuml Edit Meal Plan - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Redaguoti mitybos planą - Sequence Diagram
+
+actor "Šeimos\nnarys" as User
+participant "MealPlanningPage\n<<screen>>" as Page
+participant "MealPlanningController\n<<control>>" as Controller
+participant "MealPlanningService" as MealService
+participant "DishEntity\n<<entity>>" as Dish
+participant "MealPlanEntity\n<<entity>>" as MealPlan
+participant "ShoppingListService" as ShoppingService
+participant "SupabaseClient\n(Core.Network)" as Supabase
+database "Supabase DB\n(meal_plans)" as Database
+
+== SCENARIJUS: Vartotojas redaguoja mitybos planą ==
+
+User -> Page: Paspaudžia "Redaguoti planą"
+activate Page
+
+Page -> Controller: EditMealPlanEvent(planId)
+activate Controller
+
+Controller -> Supabase: from('meal_plans')\n  .select()\n  .eq('id', planId)\n  .eq('user_id', userId)\n  .single()
+activate Supabase
+Supabase -> Database: SELECT * FROM meal_plans\nWHERE id = ? AND user_id = ?
+activate Database
+Database --> Supabase: MealPlan data (JSON)
+deactivate Database
+Supabase --> Controller: Map<String, dynamic>
+deactivate Supabase
+
+Controller -> Controller: mapToMealPlanEntity(data)
+Controller -> MealPlan: create(data)
+activate MealPlan
+MealPlan --> Controller: MealPlanEntity
+deactivate MealPlan
+
+Controller --> Page: MealPlanEditState(mealPlan)
+deactivate Controller
+
+Page -> User: Rodo esamą planą redagavimo režime
+deactivate Page
+
+note right of User: ============================================\nŠAKA: Ką redaguoti?\n============================================
+
+== SCENARIJUS B1: Redaguoti konkretų valgį ==
+
+alt Redaguoti konkretų valgį
+    User -> Page: Pasirenka valgį (diena, mealType)
+    activate Page
+    Page -> Controller: EditMealEvent(day, mealType)
+    activate Controller
+    
+    alt Regeneruoti variantus
+        Controller -> MealService: regenerateMealVariants(\n  day, mealType, userGoals\n)
+        activate MealService
+        
+        MealService -> MealService: Generuoti naujus 3 variantus\n(ta pati logika kaip sukūrimas)
+        
+        MealService --> Controller: List<Dish> (3 variants)
+        deactivate MealService
+        
+        Controller --> Page: MealVariantsGeneratedState(variants)
+        deactivate Controller
+        Page -> User: Rodo 3 naujus variantus
+        deactivate Page
+        
+        User -> Page: Pasirenka variantą
+        activate Page
+        Page -> Controller: SelectMealVariantEvent(selectedDish)
+        activate Controller
+        Controller -> Dish: create(selectedDish)
+        activate Dish
+        Dish --> Controller: DishEntity
+        deactivate Dish
+        Controller --> Page: MealVariantSelectedState(dish)
+        deactivate Controller
+        Page --> User: Rodo pasirinktą variantą
+        deactivate Page
+        
+    else Pridėti ranka
+        User -> Page: Paspaudžia "Pridėti ranka"
+        activate Page
+        Page -> Controller: AddMealManuallyEvent(day, mealType)
+        activate Controller
+        Controller --> Page: AddMealFormState()
+        deactivate Controller
+        Page -> User: Rodo formą:\n- Pavadinimas\n- Ingredientai\n- Kalorijos\n- Porcijų dydis
+        deactivate Page
+        
+        User -> Page: Suveda informaciją ir išsaugo
+        activate Page
+        Page -> Controller: SaveManualMealEvent(mealData)
+        activate Controller
+        Controller -> Dish: create(mealData)
+        activate Dish
+        Dish --> Controller: DishEntity
+        deactivate Dish
+        Controller --> Page: MealAddedState(dish)
+        deactivate Controller
+        Page --> User: Patiekalas pridėtas
+        deactivate Page
+        
+    else Lock/Unlock valgį
+        User -> Page: Paspaudžia "Lock/Unlock"
+        activate Page
+        Page -> Controller: ToggleMealLockEvent(day, mealType)
+        activate Controller
+        Controller -> Controller: toggleLockedMeal(\n  mealPlan, day, mealType\n)
+        Controller --> Page: MealLockToggledState()
+        deactivate Controller
+        Page --> User: Valgis užrakintas/atlaisvintas
+        deactivate Page
+    endif
+    
+    Controller -> MealPlan: updateMeal(day, mealType, dish)
+    activate MealPlan
+    MealPlan --> Controller: Updated MealPlanEntity
+    deactivate MealPlan
+    
+    Controller -> Controller: convertToJson(mealPlan)
+    
+    Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
+    activate Supabase
+    Supabase -> Database: UPDATE meal_plans\nSET meals = ?\nWHERE id = ?
+    activate Database
+    Database --> Supabase: Success
+    deactivate Database
+    Supabase --> Controller: Updated data
+    deactivate Supabase
+    
+else Pridėti naują valgį
+    User -> Page: Paspaudžia "Pridėti valgį"
+    activate Page
+    Page -> Controller: AddNewMealEvent(day, mealType)
+    activate Controller
+    Controller --> Page: AddNewMealFormState()
+    deactivate Controller
+    Page -> User: Rodo formą (diena, valgio tipas, receptas)
+    deactivate Page
+    
+    User -> Page: Suveda arba pasirenka receptą
+    activate Page
+    Page -> Controller: SaveNewMealEvent(mealData)
+    activate Controller
+    Controller -> Dish: create(mealData)
+    activate Dish
+    Dish --> Controller: DishEntity
+    deactivate Dish
+    Controller -> MealPlan: addMeal(day, mealType, dish)
+    activate MealPlan
+    MealPlan --> Controller: Updated MealPlanEntity
+    deactivate MealPlan
+    
+    Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
+    activate Supabase
+    Supabase -> Database: UPDATE meal_plans SET meals = ?\nWHERE id = ?
+    activate Database
+    Database --> Supabase: Success
+    deactivate Database
+    Supabase --> Controller: Success
+    deactivate Supabase
+    Controller --> Page: MealAddedState()
+    deactivate Controller
+    Page --> User: Valgis pridėtas
+    deactivate Page
+    
+else Pašalinti valgį
+    User -> Page: Paspaudžia "Pašalinti" ant valgio
+    activate Page
+    Page -> Controller: RemoveMealEvent(day, mealType)
+    activate Controller
+    Controller --> Page: ConfirmDeleteMealState()
+    deactivate Controller
+    Page -> User: Rodo patvirtinimo dialogą
+    deactivate Page
+    
+    alt Vartotojas patvirtina
+        User -> Page: Paspaudžia "Taip"
+        activate Page
+        Page -> Controller: ConfirmRemoveMealEvent(day, mealType)
+        activate Controller
+        
+        Controller -> MealPlan: removeMeal(day, mealType)
+        activate MealPlan
+        MealPlan --> Controller: Updated MealPlanEntity
+        deactivate MealPlan
+        
+        Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
+        activate Supabase
+        Supabase -> Database: UPDATE meal_plans SET meals = ?\nWHERE id = ?
+        activate Database
+        Database --> Supabase: Success
+        deactivate Database
+        Supabase --> Controller: Success
+        deactivate Supabase
+        
+        Controller --> Page: MealRemovedState()
+        deactivate Controller
+        Page --> User: Valgis pašalintas
+        deactivate Page
+    endif
+    
+else Regeneruoti visą planą
+    User -> Page: Paspaudžia "Regeneruoti planą"
+    activate Page
+    Page -> Controller: RegenerateMealPlanEvent(planId)
+    activate Controller
+    
+    Controller -> MealService: regenerateMealPlan(\n  mealPlan, userGoals\n)
+    activate MealService
+    
+    MealService -> MealService: Filtruoti užrakintus valgius\n(locked meals nekeičiami)
+    MealService -> MealService: Regeneruoti neužrakintus valgius
+    
+    MealService --> Controller: RegeneratedMealPlanEntity
+    deactivate MealService
+    
+    Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
+    activate Supabase
+    Supabase -> Database: UPDATE meal_plans SET meals = ?\nWHERE id = ?
+    activate Database
+    Database --> Supabase: Success
+    deactivate Database
+    Supabase --> Controller: Success
+    deactivate Supabase
+    
+    Controller --> Page: MealPlanRegeneratedState()
+    deactivate Controller
+    Page --> User: Planas regeneruotas
+    deactivate Page
+endif
+
+== Shopping List atnaujinimas ==
+
+Controller -> ShoppingService: updateShoppingList(\n  mealPlan\n)
+activate ShoppingService
+
+ShoppingService -> ShoppingService: Atnaujinti pirkinių sąrašą\npagal pakeitimus
+
+ShoppingService --> Controller: Updated ShoppingList
+deactivate ShoppingService
+
+Controller -> Supabase: from('shopping_lists')\n  .update({'items': itemsJson})\n  .eq('meal_plan_id', planId)
+activate Supabase
+Supabase -> Database: UPDATE shopping_lists SET items = ?\nWHERE meal_plan_id = ?
+activate Database
+Database --> Supabase: Success
+deactivate Database
+Supabase --> Controller: Success
+deactivate Supabase
+
+Controller --> Page: MealPlanUpdatedState(\n  message: "Planas atnaujintas!"\n)
+deactivate Controller
+
+Page -> User: Rodo sėkmės pranešimą:\n✅ "Planas atnaujintas!"
+deactivate Page
+
+note over User, Database
+  **SVARBU:**
+  - Galima redaguoti konkretų valgį, pridėti, pašalinti arba regeneruoti visą planą
+  - Užrakinti valgiai nekeičiami
+  - Shopping list automatiškai atnaujinamas
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,124 @@
+@startuml Saldytuvas Plus - Komponentų Diagrama su Artifacts
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Komponentų Diagrama su Artifacts (Fizinė Implementacija)
+
+' ============================================
+' PAGRINDINIAI KOMPONENTAI
+' ============================================
+
+component "ClientApp" <<component>> as ClientApp
+
+component "External services" <<component>> as ExternalServices
+
+component "DomainApp" <<component>> as DomainApp
+
+component "FridgeDB" <<component>> as FridgeDB
+
+' ============================================
+' ARTIFACTS (Fiziniai failai/Deployment)
+' ============================================
+
+artifact "lib/app.dart" as AppDart
+artifact "lib/main.dart" as MainDart
+artifact "lib/features/**/pages/*.dart" as PagesArtifact
+artifact "lib/features/**/bloc/*.dart" as BlocArtifact
+artifact "lib/theme/app_theme.dart" as ThemeArtifact
+
+artifact "lib/core/network/supabase_client.dart" as SupabaseClientArtifact
+artifact "lib/core/config/app_config.dart" as ConfigArtifact
+artifact "lib/core/errors/*.dart" as ErrorsArtifact
+
+artifact "lib/services/*_service.dart" as ServicesArtifact
+artifact "lib/features/**/repositories/*_repository.dart" as RepositoriesArtifact
+
+artifact "supabase/migrations/*.sql" as MigrationsArtifact
+artifact "supabase/schema.sql" as SchemaArtifact
+
+artifact "pubspec.yaml" as PubspecArtifact
+artifact "build/app/outputs/flutter-apk/app-release.apk" as AndroidArtifact
+artifact "build/web/" as WebArtifact
+
+' ============================================
+' RYŠIAI: Komponentai → Artifacts
+' ============================================
+ClientApp ..> AppDart <<manifest>>
+ClientApp ..> MainDart <<manifest>>
+ClientApp ..> PagesArtifact <<manifest>>
+ClientApp ..> BlocArtifact <<manifest>>
+ClientApp ..> ThemeArtifact <<manifest>>
+
+DomainApp ..> ServicesArtifact <<manifest>>
+DomainApp ..> RepositoriesArtifact <<manifest>>
+
+FridgeDB ..> MigrationsArtifact <<manifest>>
+FridgeDB ..> SchemaArtifact <<manifest>>
+
+ExternalServices ..> SupabaseClientArtifact <<manifest>>
+
+' ============================================
+' RYŠIAI: Use Dependencies
+' ============================================
+ClientApp ..> ExternalServices <<use>>
+ClientApp ..> DomainApp <<use>>
+DomainApp ..> FridgeDB <<use>>
+
+' ============================================
+' RYŠIAI: Artifacts → Artifacts
+' ============================================
+MainDart ..> AppDart <<use>>
+AppDart ..> PagesArtifact <<use>>
+AppDart ..> ThemeArtifact <<use>>
+PagesArtifact ..> BlocArtifact <<use>>
+BlocArtifact ..> ServicesArtifact <<use>>
+BlocArtifact ..> RepositoriesArtifact <<use>>
+RepositoriesArtifact ..> SupabaseClientArtifact <<use>>
+
+' ============================================
+' DEPLOYMENT ARTIFACTS
+' ============================================
+artifact "Android APK" as AndroidDeploy
+artifact "Web Build" as WebDeploy
+artifact "iOS IPA" as IOSDeploy
+
+PubspecArtifact ..> AndroidDeploy <<deploy>>
+PubspecArtifact ..> WebDeploy <<deploy>>
+PubspecArtifact ..> IOSDeploy <<deploy>>
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Komponentai:**
+  - ClientApp, External services, DomainApp, FridgeDB
+  
+  **Artifacts:**
+  - Fiziniai failai ir deployment paketai
+  
+  **Ryšiai:**
+  ..> <<use>> : naudoja
+  ..> <<manifest>> : manifestuoja (fizinis failas)
+  ..> <<deploy>> : deploy'ina
+endlegend
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

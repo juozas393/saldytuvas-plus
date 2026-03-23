@@ -1,0 +1,270 @@
+@startuml Evaluate Health Score - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Įvertinti sveikatos įvertį - Automatinis procesas
+
+participant "DB Trigger\n(meal_plans)" as Trigger
+participant "HealthEvaluationController\n<<control>>" as Controller
+participant "HealthScoreService\n<<service>>" as HealthService
+participant "NutritionService\n<<service>>" as NutritionService
+participant "MealPlanEntity\n<<entity>>" as MealPlan
+database "Database\n(meal_plans, nutrition_data,\nuser_profiles, health_scores)" as Database
+
+== SCENARIJUS: Automatinis sveikatos įvertinimas po mitybos plano sukūrimo ==
+
+note over Trigger: **TRIGGER:**\nPo INSERT į meal_plans\nsistema automatiškai inicijuoja\nsveikatos įvertinimą
+
+Trigger -> Controller: EvaluateHealthScoreEvent(\n  mealPlanId: string,\n  userId: string\n)
+activate Controller
+
+note right of Controller: **AUTOMATINIS PROCESAS:**\nController koordinuoja visą procesą\nNenaudoja išorinių API\nVisi skaičiavimai lokaliai\nsu duomenimis iš DB\n\n**CURRENTSCORE SEKIMAS:**\nController seka currentScore kintamąjį\nper visą procesą ir atnaujina jį\npo kiekvieno patikrinimo
+
+== 1. Gauti mitybos plano duomenis ==
+
+Controller -> Database: SELECT * FROM meal_plans\nWHERE id = ?\nAND deleted_at IS NULL
+activate Database
+
+Database --> Controller: MealPlan data (JSON)\n- plan_start_date\n- plan_end_date\n- meals: [{day, mealType, recipe, calories, ...}]\n- user_id
+deactivate Database
+
+Controller -> Controller: mapToMealPlanEntity(data)
+Controller -> MealPlan: create(data)
+activate MealPlan
+MealPlan --> Controller: MealPlanEntity
+deactivate MealPlan
+
+== 2. Apskaičiuoti pradinį sveikatos įvertį ==
+
+Controller -> HealthService: calculateInitialHealthScore()
+activate HealthService
+
+HealthService -> HealthService: establishInitialScore()\n- Pradinis įvertis = 100
+HealthService --> Controller: initialScore: 100
+deactivate HealthService
+
+== 3. Įvertinti BMI ==
+
+Controller -> Controller: extractUserId(mealPlan)\n- userId iš mealPlan.user_id
+Controller -> Database: SELECT height, weight\nFROM user_profiles\nWHERE user_id = ?
+activate Database
+
+alt BMI duomenys rasti
+    Database --> Controller: {height: 175, weight: 70}
+    deactivate Database
+    
+    Controller -> HealthService: evaluateBMI(height, weight, initialScore)
+    activate HealthService
+    HealthService -> HealthService: calculateBMI(weight, height)\nBMI = weight / (height/100)²
+    HealthService -> HealthService: adjustScoreByBMI(bmi, initialScore)\n- Jei BMI < 18.5 arba > 30: atimti balus
+    HealthService --> Controller: adjustedScore: number
+    deactivate HealthService
+    
+    Controller -> Controller: currentScore = adjustedScore\n- Atnaujinti currentScore
+else BMI duomenų nėra
+    Database --> Controller: null
+    deactivate Database
+    
+    Controller -> HealthService: useDefaultBMI(initialScore)
+    activate HealthService
+    HealthService -> HealthService: useDefaultBMI()\n- Naudoti default reikšmę\n- Neatima balų
+    HealthService --> Controller: adjustedScore: number (be pakeitimų)
+    deactivate HealthService
+    
+    Controller -> Controller: currentScore = adjustedScore\n- currentScore = initialScore (be pakeitimų)
+end
+
+== 4. Apskaičiuoti makroelementų pasiskirstymą ==
+
+Controller -> NutritionService: calculateMacronutrientDistribution(\n  mealPlan: MealPlanEntity\n)
+activate NutritionService
+
+NutritionService -> NutritionService: aggregateMacronutrients(meals)\n- Sumuoti visus valgius:\n  * Carbohydrates (g)\n  * Proteins (g)\n  * Fats (g)\n  * Total calories\n- Duomenys iš meal_plans.meals
+NutritionService -> NutritionService: calculateRatios()\n- Carbs % = (carbs * 4) / totalCalories * 100\n- Proteins % = (proteins * 4) / totalCalories * 100\n- Fats % = (fats * 9) / totalCalories * 100
+NutritionService --> Controller: MacronutrientDistribution(\n  carbsPercent: number,\n  proteinsPercent: number,\n  fatsPercent: number,\n  totalCalories: number\n)
+deactivate NutritionService
+
+== 5. Apskaičiuoti mikroelementų santykius ==
+
+Controller -> Controller: extractRecipeIds(mealPlan)\n- Ištraukti visus recipe_id iš mealPlan.meals
+Controller -> Database: SELECT vitamins, minerals\nFROM nutrition_data\nWHERE recipe_id IN (...)
+activate Database
+
+alt Mikroelementų duomenys rasti
+    Database --> Controller: List<NutritionData>
+    deactivate Database
+    
+    Controller -> NutritionService: calculateMicronutrientRatios(\n      mealPlan: MealPlanEntity,\n      nutritionData: List\n    )
+    activate NutritionService
+    NutritionService -> NutritionService: calculateRatiosPerCalorie()\n- Vitamins per 100 kcal\n- Minerals per 100 kcal
+    NutritionService --> Controller: MicronutrientRatios(\n      vitaminsPer100kcal: Map,\n      mineralsPer100kcal: Map\n    )
+    deactivate NutritionService
+else Mikroelementų duomenų nėra
+    Database --> Controller: empty list
+    deactivate Database
+    
+    Controller -> NutritionService: useDefaultRatios(mealPlan)
+    activate NutritionService
+    NutritionService -> NutritionService: useDefaultRatios()\n- Naudoti default reikšmes
+    NutritionService --> Controller: MicronutrientRatios(default)
+    deactivate NutritionService
+end
+
+== 6. Patikrinti cukraus viršijimą ==
+
+Controller -> HealthService: checkSugarExcess(\n  macronutrients: MacronutrientDistribution,\n  currentScore: number\n)
+activate HealthService
+
+HealthService -> HealthService: calculateSugarRatio(macronutrients)\n- Sugar % = (sugar * 4) / totalCalories * 100\n- Cukraus duomenys iš macronutrients
+HealthService -> HealthService: checkThreshold(sugarRatio)\n- Jei sugar % > 10%: VIRŠIJIMAS
+
+alt Cukraus viršijimas
+    HealthService -> HealthService: deductPoints(\n      currentScore,\n      deductionAmount: 10\n    )\n    - Atimti 10 balų už didelį cukraus kiekį
+    HealthService --> Controller: updatedScore: number
+    Controller -> Controller: currentScore = updatedScore\n- Atnaujinti currentScore
+else Nėra cukraus viršijimo
+    HealthService --> Controller: updatedScore: number (be pakeitimų)
+    Controller -> Controller: currentScore nepakitęs
+end
+deactivate HealthService
+
+== 7. Patikrinti riebalų viršijimą ==
+
+Controller -> HealthService: checkFatExcess(\n  macronutrients: MacronutrientDistribution,\n  currentScore: number\n)
+activate HealthService
+
+HealthService -> HealthService: checkThreshold(macronutrients.fatsPercent)\n- Jei fats % > 35%: VIRŠIJIMAS
+
+alt Riebalų viršijimas
+    HealthService -> HealthService: deductPoints(\n      currentScore,\n      deductionAmount: 10\n    )\n    - Atimti 10 balų už didelį riebalų kiekį
+    HealthService --> Controller: updatedScore: number
+    Controller -> Controller: currentScore = updatedScore\n- Atnaujinti currentScore
+else Nėra riebalų viršijimo
+    HealthService --> Controller: updatedScore: number (be pakeitimų)
+    Controller -> Controller: currentScore nepakitęs
+end
+deactivate HealthService
+
+== 8. Patikrinti sočiųjų riebalų viršijimą ==
+
+Controller -> HealthService: checkSaturatedFatExcess(\n  macronutrients: MacronutrientDistribution,\n  currentScore: number\n)
+activate HealthService
+
+HealthService -> HealthService: checkThreshold(macronutrients.saturatedFatsPercent)\n- Jei saturatedFats % > 10%: VIRŠIJIMAS
+
+alt Sočiųjų riebalų viršijimas
+    HealthService -> HealthService: deductPoints(\n      currentScore,\n      deductionAmount: 10\n    )\n    - Atimti 10 balų už didelį sočiųjų riebalų kiekį
+    HealthService --> Controller: updatedScore: number
+    Controller -> Controller: currentScore = updatedScore\n- Atnaujinti currentScore
+else Nėra sočiųjų riebalų viršijimo
+    HealthService --> Controller: updatedScore: number (be pakeitimų)
+    Controller -> Controller: currentScore nepakitęs
+end
+deactivate HealthService
+
+== 9. Patikrinti druskos viršijimą ==
+
+Controller -> NutritionService: getSaltContent(mealPlan)
+activate NutritionService
+NutritionService -> NutritionService: extractSaltFromMeals(mealPlan.meals)\n- Duomenys iš meal_plans.meals\n- Salt per 100g
+NutritionService --> Controller: saltPer100g: number
+deactivate NutritionService
+
+Controller -> HealthService: checkSaltExcess(\n  saltPer100g: number,\n  currentScore: number\n)
+activate HealthService
+
+HealthService -> HealthService: checkThreshold(saltPer100g)\n- Jei saltPer100g > 1.5g: VIRŠIJIMAS
+
+alt Druskos viršijimas
+    HealthService -> HealthService: deductPoints(\n      currentScore,\n      deductionAmount: 10\n    )\n    - Atimti 10 balų už didelį druskos kiekį
+    HealthService --> Controller: updatedScore: number
+    Controller -> Controller: currentScore = updatedScore\n- Atnaujinti currentScore
+else Nėra druskos viršijimo
+    HealthService --> Controller: updatedScore: number (be pakeitimų)
+    Controller -> Controller: currentScore nepakitęs
+end
+deactivate HealthService
+
+== 10. Patikrinti kalorijų kiekį per 100g ==
+
+Controller -> NutritionService: calculateCaloriesPer100g(mealPlan)
+activate NutritionService
+NutritionService -> NutritionService: aggregateCaloriesAndWeight(mealPlan.meals)\n- Total calories / Total weight * 100\n- Duomenys iš meal_plans.meals
+NutritionService --> Controller: caloriesPer100g: number
+deactivate NutritionService
+
+Controller -> HealthService: checkCaloriesPer100g(\n  caloriesPer100g: number,\n  currentScore: number\n)
+activate HealthService
+
+HealthService -> HealthService: checkThreshold(caloriesPer100g)
+
+alt Per daug kalorijų 100g (> 400 kcal)
+    HealthService --> Controller: updatedScore: number (be pakeitimų)\n(per didelis - ignoruojamas)
+    Controller -> Controller: currentScore nepakitęs
+else Didelis kalorijų kiekis 100g (300-400 kcal)
+    HealthService -> HealthService: deductPoints(\n      currentScore,\n      deductionAmount: 5\n    )\n    - Atimti 5 balus už didelį kalorijų kiekį 100g
+    HealthService --> Controller: updatedScore: number
+    Controller -> Controller: currentScore = updatedScore\n- Atnaujinti currentScore
+else Normalus kalorijų kiekis (< 300 kcal)
+    HealthService --> Controller: updatedScore: number (be pakeitimų)
+    Controller -> Controller: currentScore nepakitęs
+end
+deactivate HealthService
+
+== 11. Nustatyti maistingumo lygį ==
+
+Controller -> Controller: finalScore = currentScore\n- Galutinis įvertis = dabartinis įvertis po visų patikrinimų
+Controller -> HealthService: determineNutritionalLevel(\n  finalScore: number\n)
+activate HealthService
+
+HealthService -> HealthService: classifyScore(finalScore)
+
+alt Įvertis >= 80
+    HealthService -> HealthService: setNutritionalLevel(\n      'Aukštas maistingumo lygis'\n    )
+    HealthService --> Controller: NutritionalLevel.HIGH
+else Įvertis >= 50
+    HealthService -> HealthService: setNutritionalLevel(\n      'Vidutinis maistingumo lygis'\n    )
+    HealthService --> Controller: NutritionalLevel.MEDIUM
+else Įvertis < 50
+    HealthService -> HealthService: setNutritionalLevel(\n      'Žemas maistingumo lygis'\n    )
+    HealthService --> Controller: NutritionalLevel.LOW
+end
+deactivate HealthService
+
+== 12. Išsaugoti rezultatą į DB ==
+
+Controller -> Controller: buildHealthEvaluationResult(\n  finalScore: number,\n  nutritionalLevel: NutritionalLevel,\n  deductions: [...],\n  bmi: number,\n  macronutrients: {...},\n  micronutrients: {...}\n)
+
+Controller -> Database: INSERT INTO health_scores\n(meal_plan_id, user_id, health_score,\nnutritional_level, bmi, deductions,\nmacronutrients, micronutrients, evaluated_at)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+activate Database
+
+Database --> Controller: Inserted health_score (id)
+deactivate Database
+
+Controller -> Database: UPDATE meal_plans\nSET health_score_id = ?\nWHERE id = ?
+activate Database
+
+Database --> Controller: Success
+deactivate Database
+
+Controller --> Trigger: HealthScoreEvaluated(\n  mealPlanId: string,\n  healthScore: number,\n  nutritionalLevel: string\n)
+deactivate Controller
+
+note over Trigger, Database
+  **SVARBU:**
+  - **AUTOMATINIS PROCESAS:** Vyksta po meal_plan sukūrimo (DB trigger)
+  - **CONTROLLER KOORDINUOJA:** Visi veiksmai eina per HealthEvaluationController
+  - **SERVICES SKAIČIUOJA:** Controller naudoja Services skaičiavimams
+  - **CONTROLLER KREIPIASI Į DB:** Visi DB užklausos vykdomos per Controller
+  - **LOKALŪS SKAIČIAVIMAI:** Visi skaičiavimai vykdomi lokaliai su duomenimis iš DB
+  - **NĖRA IŠORINIŲ API:** Nenaudoja jokių išorinių paslaugų
+  - **DEFAULT REIKŠMĖS:** Jei trūksta duomenų (pvz., BMI) → naudoti default reikšmes
+  - **REZULTATAS:** Išsaugomas į health_scores lentelę ir susiejamas su meal_plan
+  - **ASYNC:** Procesas gali vykti background'e, neblokuojant UI
+end note
+
+@enduml
+

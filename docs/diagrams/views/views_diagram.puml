@@ -1,0 +1,102 @@
+@startuml Views - Saldytuvas Plus
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Views - Saldytuvas Plus
+
+' ============================================
+' TIK TŪŠTI PUSLAPIAI SU OPERACIJOMIS
+' ============================================
+
+class "Add Recipe Page" as AddRecipePage {
+  + openAddRecipePage()
+  + inputRecipeName(name)
+  + inputRecipeDescription(description)
+  + inputRecipeIngredients(ingredients)
+  + inputRecipeInstructions(instructions)
+  + clickAddIngredient()
+  + clickRemoveIngredient(ingredientId)
+  + clickSaveRecipe()
+  + clickCancel()
+  + clickUploadImage()
+  + clickChooseCamera()
+  + clickChooseGallery()
+}
+
+class "Login Page" as LoginPage {
+  + openLoginPage()
+  + inputEmail(email)
+  + inputPassword(password)
+  + clickLoginButton()
+  + clickRegisterButton()
+  + clickForgotPassword()
+  + clickResetPassword(email)
+  + validateForm()
+}
+
+class "Profile Page" as ProfilePage {
+  + openProfilePage()
+  + clickEditProfile()
+  + inputName(name)
+  + inputEmail(email)
+  + inputPhone(phone)
+  + clickSaveProfile()
+  + clickCancel()
+  + clickChangePassword()
+  + clickManageFamilyMembers()
+  + clickViewReceipts()
+  + clickViewBudget()
+}
+
+class "Settings Page" as SettingsPage {
+  + openSettingsPage()
+  + clickNotificationSettings()
+  + toggleNotifications(enabled)
+  + toggleEmailNotifications(enabled)
+  + togglePushNotifications(enabled)
+  + clickLanguageSettings()
+  + selectLanguage(language)
+  + clickThemeSettings()
+  + selectTheme(theme)
+  + clickFoodRulesSettings()
+  + clickManageFoodRules()
+  + clickAbout()
+  + clickLogout()
+}
+
+class "Receipt And Budget Page" as ReceiptAndBudgetPage {
+  + openReceiptAndBudgetPage()
+  + clickScanReceipt()
+  + clickChooseCamera()
+  + clickChooseGallery()
+  + clickViewReceipt(receiptID)
+  + clickDeleteReceipt(receiptID)
+  + clickViewBudget()
+  + clickEditBudget()
+  + clickSetBudgetLimit(limit)
+  + clickViewBudgetSummary()
+  + clickViewBudgetAlerts()
+}
+
+class "Store Deals Page" as StoreDealsPage {
+  + openStoreDealsPage()
+  + selectStore(storeId)
+  + clickViewDeals(storeId)
+  + clickFilterDeals(category)
+  + clickSearchDeals(query)
+  + clickViewDealDetails(dealId)
+}
+
+class "Deals Page" as DealsPage {
+  + openDealsPage()
+  + clickViewAllDeals()
+  + clickFilterByStore(storeId)
+  + clickFilterByCategory(category)
+  + clickSearchDeals(query)
+  + clickViewDealDetails(dealId)
+  + clickRefreshDeals()
+}
+
+@enduml

@@ -1,0 +1,47 @@
+@startuml PAA6 Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+title PAA6 Valdyti priėjimą prie bendro inventoriaus
+
+|#FFE0B2|Šeimos administratorius|
+start
+:Atidaryti inventoriaus\nteisių valdymo puslapį;
+
+|#E1BEE7|Duomenų bazė|
+:Gauti šeimos narių sąrašą\nsu esamomis teisėmis;
+
+|#C8E6C9|Posistemis|
+:Rodyti narių sąrašą\nsu jų teisėmis;
+
+repeat
+  |#FFE0B2|Šeimos administratorius|
+  :Pasirinkti narį;
+
+  switch (Pasirinktas veiksmas?)
+  case (Suteikti teisę)
+    |#FFE0B2|Šeimos administratorius|
+    :Pasirinkti teisę:\npridėti produktus,\nžymėti sunaudojimą,\nredaguoti produktus;
+    |#E1BEE7|Duomenų bazė|
+    :Išsaugoti suteiktą teisę;
+    |#C8E6C9|Posistemis|
+    :Atnaujinti nario teises;
+
+  case (Atimti teisę)
+    |#FFE0B2|Šeimos administratorius|
+    :Pasirinkti teisę\nkurią nori atimti;
+    |#E1BEE7|Duomenų bazė|
+    :Pašalinti teisę;
+    |#C8E6C9|Posistemis|
+    :Atnaujinti nario teises;
+
+  case (Baigti darbą)
+  endswitch
+
+repeat while (Tęsia darbą?)
+
+stop
+@enduml

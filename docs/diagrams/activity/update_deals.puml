@@ -1,0 +1,105 @@
+@startuml Update Deals Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+
+title Atnaujinti parduotuvių akcijas - Activity Diagram
+
+' ==========================
+' TAVO PROGRAMA – FONINIS JOB'AS
+' ==========================
+|#C8E6C9|DealsUpdateJob\n(tavo programa)|
+start
+:Suplanuotas job'as suveikia\n(pvz. kasdien 03:00);
+
+:Sudaryti parduotuvių sąrašą:
+- Maxima
+- Lidl
+- IKI
+- Rimi;
+
+repeat
+  :Paimti kitą parduotuvę\n(iš sąrašo);
+
+  ' ==========================
+  ' TAVO PROGRAMA – SCRAPERIS (Playwright)
+  ' ==========================
+  |#C8E6C9|DealsScraperService\n(tavo Node.js + Playwright)|
+  :Paleisti Playwright naršyklę\n(headless režimu);
+  :Išsiųsti užklausą\nį parduotuvės akcijų puslapį\narba leidinį;
+
+  |#FFCCBC|Parduotuvės svetainė / API\n(išorinė sistema)|
+  :Gauti užklausą iš scraperio;
+  :Sugeneruoti ir atiduoti\nakcijų puslapį (HTML / JS / JSON);
+
+  |#C8E6C9|DealsScraperService\n(tavo Node.js + Playwright)|
+  :Palaukti, kol parduotuvės puslapis\npilnai užsikraus (HTML ir JS);
+
+  :Ištraukti reikalingus elementus\nsu selektoriais (DOM);
+  :Surinkti žalius akcijų duomenis:
+  - pavadinimas
+  - aprašymas
+  - kaina
+  - nuolaida
+  - galiojimo datos
+  - kategorija
+  - tekstas su prekės pavadinimu;
+
+  if (Duomenis pavyko gauti?) then (Taip)
+    |#C8E6C9|DealsNormalizer\n(tavo programa)|
+    :Suvienodinti laukus pagal vidinį formatą:
+    - valiuta → EUR
+    - datos → YYYY-MM-DD
+    - kategorijos → vidinis kategorijų sąrašas;
+
+    ' ==========================
+    ' TAVO PROGRAMA – PAVADINIMŲ SUTAPDYMAS (RapidFuzz)
+    ' ==========================
+    |#C8E6C9|ProductMatchingService\n(tavo programa + RapidFuzz)|
+    :Gauti vidinį produktų sąrašą\n(iš Supabase products lentelės);
+    :Kiekvienai akcijai\napskaičiuoti atitikimą\nsu produktais (RapidFuzz);
+
+    if (Geriausias sutapimas\nviršija slenkstį\n(pvz. > 80%)) then (Taip)
+      :Priskirti product_id\npagal geriausią atitikmenį;
+    else (Ne)
+      :Pažymėti akciją kaip\nneturinčią tikslaus produkto\n(match_status = 'unmatched');
+    endif
+
+    ' ==========================
+    ' TAVO DUOMENŲ BAZĖ – Supabase
+    ' ==========================
+    |#E1BEE7|Supabase DB\n(tavo deals lentelė)|
+    :Įrašyti arba atnaujinti akcijų įrašus\n(UPsert pagal parduotuvę ir sku / product_id);
+
+    |#C8E6C9|DealsUpdateJob\n(tavo programa)|
+    :Padidinti skaitiklius:
+    - sėkmingų akcijų
+    - sėkmingų parduotuvių;
+  else (Ne)
+    |#C8E6C9|DealsUpdateJob\n(tavo programa)|
+    :Užregistruoti klaidą loguose:
+    - parduotuvės pavadinimas
+    - šaltinio adresas (URL)
+    - klaidos tipas;
+  endif
+
+repeat while (Yra dar parduotuvių?)
+
+|#C8E6C9|DealsUpdateJob\n(tavo programa)|
+:Apskaičiuoti atnaujinimo santrauką:
+- kiek akcijų atnaujinta
+- kiek parduotuvių pavyko
+- kiek klaidų
+- kiek laiko užtruko;
+
+|#E1BEE7|Supabase DB\n(deals_update_logs)|
+:Įrašyti santrauką\nį deals_update_logs lentelę;
+
+stop
+
+@enduml
+
+

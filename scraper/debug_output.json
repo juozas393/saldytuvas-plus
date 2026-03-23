@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "totalProducts": 29,
+  "duration": 39704,
+  "errors": [],
+  "sampleProducts": [
+    {
+      "store": "lidl",
+      "name": "Tamsiosios besėklės vynuogės",
+      "originalPrice": 2.99,
+      "discountPrice": 1.79,
+      "discountPercent": 40,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-10T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://imgproxy-retcat.assets.schwarz/s4dcRMPKmuq_QXjzHhTnbF8Pu8yDsXVoGuQKcCEyErA/sm:1/exar:1:ce/w:427/h:320/cz/M6Ly9wcm9kLWNhd/GFsb2ctbWVkaWEvbHQvMS81RDU5MUY4MjVEQ0JFM0Y4RkE3REM0MkQ/wNDhBOUEyQUVENDdFQkI1NTNDQkZGRDU0QTNBNDY2NzgxNDM5RjM4LnBuZw.png",
+      "unit": "1 kg",
+      "pricePerUnit": "1 kg = 1,79 €",
+      "description": null,
+      "storeProductId": null,
+      "productUrl": "https://www.lidl.lt/p/tamsiosios-besekles-vynuoges/p10057905#searchTrackingMasterId=Product.10057905&searchTrackingTitle=Tamsiosios%2Bbes%25C4%2597kl%25C4%2597s%2Bvynuog%25C4%2597s&searchTrackingPageSize=12&searchTrackingPage=3&searchTrackingEvent=click&searchTrackingId=Product.10057905&searchTrackingOrigPos=1&searchTrackingPos=29&searchTrackingOrigPageSize=12&searchTrackingChannel=LT&list=search",
+      "sourceSection": "Maistas, gėrimai ir buities prekės",
+      "scrapedAt": "2026-03-09T15:30:01.371Z"
+    },
+    {
+      "store": "lidl",
+      "name": "Lietuviški trumpavaisiai agrukai",
+      "originalPrice": 7.49,
+      "discountPrice": 4.49,
+      "discountPercent": 40,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-10T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://imgproxy-retcat.assets.schwarz/wrpxQpyJ9e-ZI5XsIJnpKST8HJFQV8fWWNWItXMTUi4/sm:1/exar:1:ce/w:427/h:320/cz/M6Ly9wcm9kLWNhd/GFsb2ctbWVkaWEvbHQvMS83Qjg5MzlDRjJBMTNCMEUxOTE5RjU3QTc/yNTI1Q0EzMjFCMzIzRDIyQ0RGQkE2MzRBODhBRjVERUI5RDI0NEI2LnBuZw.png",
+      "unit": "1 kg",
+      "pricePerUnit": "1 kg = 4,49 €",
+      "description": null,
+      "storeProductId": null,
+      "productUrl": "https://www.lidl.lt/p/lietuviski-trumpavaisiai-agrukai/p10057906#searchTrackingMasterId=Product.10057906&searchTrackingTitle=Lietuvi%25C5%25A1ki%2Btrumpavaisiai%2Bagrukai&searchTrackingPageSize=12&searchTrackingPage=3&searchTrackingEvent=click&searchTrackingId=Product.10057906&searchTrackingOrigPos=1&searchTrackingPos=30&searchTrackingOrigPageSize=12&searchTrackingChannel=LT&list=search",
+      "sourceSection": "Maistas, gėrimai ir buities prekės",
+      "scrapedAt": "2026-03-09T15:30:01.371Z"
+    },
+    {
+      "store": "lidl",
+      "name": "Salierų stiebai",
+      "originalPrice": 1.69,
+      "discountPrice": 0.99,
+      "discountPercent": 41,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-10T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://imgproxy-retcat.assets.schwarz/kAogkbgZvhs6WRMtZnFOHbXfnC5eMYooEX7R-L8Ryts/sm:1/exar:1:ce/w:427/h:320/cz/M6Ly9wcm9kLWNhd/GFsb2ctbWVkaWEvaW50Lzc1QzhCMjE4QTdENjFEMzVEQjYzRTlFOE/Q5MTk4QjkzNDkyNzI3MDlEQkEwMEZBMDhGMTMxMDgwNzVDNjk4MzgucG5n.png",
+      "unit": "1 vnt",
+      "pricePerUnit": null,
+      "description": null,
+      "storeProductId": null,
+      "productUrl": "https://www.lidl.lt/p/salieru-stiebai/p10057907#searchTrackingMasterId=Product.10057907&searchTrackingTitle=Salier%25C5%25B3%2Bstiebai&searchTrackingPageSize=12&searchTrackingPage=3&searchTrackingEvent=click&searchTrackingId=Product.10057907&searchTrackingOrigPos=1&searchTrackingPos=31&searchTrackingOrigPageSize=12&searchTrackingChannel=LT&list=search",
+      "sourceSection": "Maistas, gėrimai ir buities prekės",
+      "scrapedAt": "2026-03-09T15:30:01.371Z"
+    }
+  ]
+}

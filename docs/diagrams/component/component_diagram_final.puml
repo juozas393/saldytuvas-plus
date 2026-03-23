@@ -1,0 +1,190 @@
+@startuml Saldytuvas Plus - Komponentų Diagrama (Pagal Loginę Architektūrą)
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Komponentų Diagrama
+
+' ============================================
+' PAGRINDINIAI KOMPONENTAI
+' ============================================
+
+component "ClientApp" <<component>> as ClientApp
+
+component "External services" <<component>> as ExternalServices
+
+component "DomainApp" <<component>> as DomainApp
+
+component "FridgeDB" <<component>> as FridgeDB
+
+' ============================================
+' CLIENTAPP REALIZACIJOS (Views)
+' ============================================
+[AddProductPage] as AddProductPage
+[AddRecipePage] as AddRecipePage
+[DealsPage] as DealsPage
+[DishPage] as DishPage
+[HomePage] as HomePage
+[InventoryPage] as InventoryPage
+[LoginPage] as LoginPage
+[MealPlanningPage] as MealPlanningPage
+[NutritionPage] as NutritionPage
+[ProductDetailsPage] as ProductDetailsPage
+[ProfilePage] as ProfilePage
+[ReceiptAndBudgetPage] as ReceiptAndBudgetPage
+[SettingsPage] as SettingsPage
+[ShoppingListScreen] as ShoppingListScreen
+[StoreDealsPage] as StoreDealsPage
+
+' ============================================
+' CLIENTAPP REALIZACIJOS (Controllers)
+' ============================================
+[AuthController] as AuthController
+[BudgetController] as BudgetController
+[DashBoardController] as DashBoardController
+[DealsController] as DealsController
+[DishController] as DishController
+[FamilyMembersController] as FamilyMembersController
+[FoodRulesController] as FoodRulesController
+[FoodSubstitudeController] as FoodSubstitudeController
+[HealthEvaluationController] as HealthEvaluationController
+[InventoryController] as InventoryController
+[MealPlanningController] as MealPlanningController
+[ProductController] as ProductController
+[ProductScanController] as ProductScanController
+[ProfileController] as ProfileController
+[ReceiptAndBudgetController] as ReceiptAndBudgetController
+[RecipeController] as RecipeController
+[RouterController] as RouterController
+[SettingsController] as SettingsController
+[ShoppingListController] as ShoppingListController
+
+' ============================================
+' EXTERNAL SERVICES REALIZACIJOS
+' ============================================
+[CameraGalleryBoundary] as CameraGalleryBoundary
+[GeminiServiceBoundary] as GeminiServiceBoundary
+[MobileScannerBoundary] as MobileScannerBoundary
+[OCRServiceBoundary] as OCRServiceBoundary
+[OpenFoodFactsServiceBoundary] as OpenFoodFactsServiceBoundary
+[SpoonacularServiceBoundary] as SpoonacularServiceBoundary
+
+' ============================================
+' DOMAINAPP REALIZACIJOS (Entities)
+' ============================================
+[Administrator] as Administrator
+[Budget] as BudgetEntity
+[Category] as Category
+[Deal] as Deal
+[Dish] as Dish
+[Environment] as Environment
+[FoodRule] as FoodRule
+[Inventory] as Inventory
+[Member] as Member
+[Notification] as Notification
+[NutritionPlan] as NutritionPlan
+[Product] as Product
+[PromoFlyer] as PromoFlyer
+[Receipt] as Receipt
+[ReceiptLine] as ReceiptLine
+[Recipe] as Recipe
+[ShoppingList] as ShoppingList
+[Store] as Store
+[User] as User
+
+' ============================================
+' RYŠIAI: Use Dependencies
+' ============================================
+ClientApp ..> ExternalServices <<use>>
+ClientApp ..> DomainApp <<use>>
+DomainApp ..> FridgeDB <<use>>
+
+' ============================================
+' RYŠIAI: Component Realization (ClientApp)
+' ============================================
+ClientApp ..> AddProductPage <<realize>>
+ClientApp ..> AddRecipePage <<realize>>
+ClientApp ..> DealsPage <<realize>>
+ClientApp ..> DishPage <<realize>>
+ClientApp ..> HomePage <<realize>>
+ClientApp ..> InventoryPage <<realize>>
+ClientApp ..> LoginPage <<realize>>
+ClientApp ..> MealPlanningPage <<realize>>
+ClientApp ..> NutritionPage <<realize>>
+ClientApp ..> ProductDetailsPage <<realize>>
+ClientApp ..> ProfilePage <<realize>>
+ClientApp ..> ReceiptAndBudgetPage <<realize>>
+ClientApp ..> SettingsPage <<realize>>
+ClientApp ..> ShoppingListScreen <<realize>>
+ClientApp ..> StoreDealsPage <<realize>>
+
+ClientApp ..> AuthController <<realize>>
+ClientApp ..> BudgetController <<realize>>
+ClientApp ..> DashBoardController <<realize>>
+ClientApp ..> DealsController <<realize>>
+ClientApp ..> DishController <<realize>>
+ClientApp ..> FamilyMembersController <<realize>>
+ClientApp ..> FoodRulesController <<realize>>
+ClientApp ..> FoodSubstitudeController <<realize>>
+ClientApp ..> HealthEvaluationController <<realize>>
+ClientApp ..> InventoryController <<realize>>
+ClientApp ..> MealPlanningController <<realize>>
+ClientApp ..> ProductController <<realize>>
+ClientApp ..> ProductScanController <<realize>>
+ClientApp ..> ProfileController <<realize>>
+ClientApp ..> ReceiptAndBudgetController <<realize>>
+ClientApp ..> RecipeController <<realize>>
+ClientApp ..> RouterController <<realize>>
+ClientApp ..> SettingsController <<realize>>
+ClientApp ..> ShoppingListController <<realize>>
+
+' ============================================
+' RYŠIAI: Component Realization (External Services)
+' ============================================
+ExternalServices ..> CameraGalleryBoundary <<realize>>
+ExternalServices ..> GeminiServiceBoundary <<realize>>
+ExternalServices ..> MobileScannerBoundary <<realize>>
+ExternalServices ..> OCRServiceBoundary <<realize>>
+ExternalServices ..> OpenFoodFactsServiceBoundary <<realize>>
+ExternalServices ..> SpoonacularServiceBoundary <<realize>>
+
+' ============================================
+' RYŠIAI: Component Realization (DomainApp)
+' ============================================
+DomainApp ..> Administrator <<realize>>
+DomainApp ..> BudgetEntity <<realize>>
+DomainApp ..> Category <<realize>>
+DomainApp ..> Deal <<realize>>
+DomainApp ..> Dish <<realize>>
+DomainApp ..> Environment <<realize>>
+DomainApp ..> FoodRule <<realize>>
+DomainApp ..> Inventory <<realize>>
+DomainApp ..> Member <<realize>>
+DomainApp ..> Notification <<realize>>
+DomainApp ..> NutritionPlan <<realize>>
+DomainApp ..> Product <<realize>>
+DomainApp ..> PromoFlyer <<realize>>
+DomainApp ..> Receipt <<realize>>
+DomainApp ..> ReceiptLine <<realize>>
+DomainApp ..> Recipe <<realize>>
+DomainApp ..> ShoppingList <<realize>>
+DomainApp ..> Store <<realize>>
+DomainApp ..> User <<realize>>
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Komponentai:**
+  - ClientApp: Flutter aplikacija
+  - External services: Išorinės paslaugos
+  - DomainApp: Verslo logika
+  - FridgeDB: Duomenų bazė
+  
+  **Ryšiai:**
+  ..> <<use>> : naudoja (dependency)
+  ..> <<realize>> : realizuoja (component realization)
+endlegend
+
+@enduml

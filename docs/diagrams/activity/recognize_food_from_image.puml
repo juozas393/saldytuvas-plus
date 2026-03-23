@@ -1,0 +1,176 @@
+@startuml Recognize Food from Image Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+
+title Atpažinti maistą iš nuotraukos - Activity Diagram
+
+|#FFE0B2|Šeimos narys|
+start
+:Paspausti mygtuką\n"Atpažinti iš nuotraukos";
+
+|#C8E6C9|Posistemis|
+:Rodyti dialogą/langą\nsu pasirinkimais:\n- 📷 Kamera\n- 🖼️ Galerija;
+
+|#FFE0B2|Šeimos narys|
+:Peržiūrėti pasirinkimus;
+
+note right: ============================================\nŠAKA: Ką pasirinkti?\n============================================
+
+if ([Pasirinkti "Kamera"]?) then (Taip)
+  note right: VARIANTAS A: Nuotrauka iš kameros
+  |#C8E6C9|Posistemis|
+  :Tikrinti leidimą naudotis kamera;
+  
+  if ([Leidimas suteiktas]?) then (Taip)
+    :Atidaryti kamerą;
+  else (Ne)
+    :Prašyti leidimo naudotis kamera;
+    :Atidaryti kamerą;
+  endif
+  
+  |#FFE0B2|Šeimos narys|
+  :Nufotografuoti maisto produktą;
+  
+else ([Pasirinkti "Galerija"]?)
+  note right: VARIANTAS B: Nuotrauka iš galerijos
+  |#C8E6C9|Posistemis|
+  :Tikrinti leidimą naudotis galerija;
+  
+  if ([Leidimas suteiktas]?) then (Taip)
+    :Atidaryti galeriją;
+  else (Ne)
+    :Prašyti leidimo naudotis galerija;
+    :Atidaryti galeriją;
+  endif
+  
+  |#FFE0B2|Šeimos narys|
+  :Pasirinkti nuotrauką iš galerijos;
+endif
+
+note right: ✅ Abi nuotraukos (galerija arba kamera)\ntoliau apdorojamos vienodai
+
+|#C8E6C9|Posistemis|
+:Gauti nuotraukos failą\niš telefono (kamera) arba galerijos;
+
+partition "Nuotraukos patikrinimas ir paruošimas" {
+    |#C8E6C9|ImageProcessingService\n(lib/features/scan/services/)|
+    :Perskaityti nuotraukos failą\nį programą;
+    :Patikrinti nuotraukos savybes:\n- ar formatas tinkamas (JPEG, PNG)\n- ar dydis ne per mažas\n- ar failas ne per didelis (max ~20MB);
+    
+    if (Failas per didelis?) then (Taip)
+      :Sumažinti nuotraukos dydį\n(resize ir compress),\nneišmetant spalvų;
+    endif
+    
+    if (Nuotrauka labai maža\n(pavyzdžiui < 200x200px)?) then (Taip)
+      :Užrašyti įspėjimą,\nkad atpažinimas gali būti\nmažesnio tikslumo;
+    endif
+    
+    :Paversti nuotrauką į tekstinį formatą\n(base64), tinkamą siųsti į API;
+    
+    note right: ✅ Nuotrauka paruošta:\n• Spalvota (RGB)\n• Tinkamas failo dydis\n• Paruošta siuntimui į Gemini API
+}
+
+partition "OCR apdorojimas (opcional, jei reikia teksto)" {
+    |#C8E6C9|OCRService\n(lib/features/scan/services/)|
+    
+    note right: OPTIONAL:\n• Naudojamas tik jei nuotraukoje\n  yra tekstas (etiketė, aprašymas)\n• Tekstas padeda tiksliau\n  suprasti produktą
+    
+    :Paleisti teksto atpažinimą (OCR)\nfone, kad nelėtintų programos;
+    
+    |#FFF9C4|Tesseract OCR\n(lokali sistema)|
+    :Skenuoti nuotrauką\ngauti tekstą\n(kalbos: lit, eng, rus);
+    
+    |#C8E6C9|Posistemis|
+    :Gauti teksto atpažinimo rezultatą;
+    
+    if (Teksto nėra\narba kokybė labai prasta?) then (Taip)
+      :Pažymėti, kad teksto\nnaudoti nebus;
+    else (Ne)
+      :Išsaugoti atpažintą tekstą\nnaudojimui Gemini API;
+    endif
+}
+
+partition "Gemini API (maisto atpažinimas)" {
+    |#C8E6C9|FoodRecognitionService\n(lib/services/)|
+    :Paruošti užklausą į Gemini API:\n- nuotrauka base64 formatu\n- teksto aprašymas (jei yra);
+    
+    |#FFCCBC|Gemini API|
+    :Gauti užklausą su nuotrauka;
+    :Atpažinti, koks maistas\npavaizduotas nuotraukoje;
+    :Grąžinti atsakymą su produktu:\n- pavadinimas\n- kategorija\n- maistinė vertė (per 100g/ml)\n- vienetai\n- tikslumo rodiklis (confidence);
+    
+    |#C8E6C9|Posistemis|
+    :Gauti atsakymą iš Gemini API;
+    
+    if (Produktas atpažintas?) then (Taip)
+      note right: ✅ Produktas sėkmingai atpažintas
+      :Išsaugoti atpažinto produkto duomenis;
+    else (Ne)
+      note right: ❌ Nepavyko atpažinti produkto
+      :Parodyti klaidos pranešimą\nvartotojui;
+      stop
+    endif
+}
+
+partition "Maistinės vertės normalizavimas" {
+  |#C8E6C9|NutritionService\n(lib/services/)|
+  :Gauti produkto maistinę vertę\n(iš Gemini API atsakymo);
+  
+  note right: MAISTINĖ VERTĖ:\n• Gemini grąžina maistinę vertę\n• Jau normalizuota per 100g/ml\n• Laukai: kalorijos, baltymai,\n  riebalai, angliavandeniai
+  
+  :Patikrinti ar maistinė vertė\nnormalizuota per 100g/ml;
+  
+  if (Maistinė vertė per kitą vienetą?) then (Taip)
+    :Perskaičiuoti maistinę vertę į 100g/ml:\n- Gauti esamą vienetą (pvz., per 50g)\n- Apskaičiuoti koeficientą: 100 / esamas_vienetas\n- Kalorijos = kalorijos_per_vnt * koeficientas\n- Baltymai = baltymai_per_vnt * koeficientas\n- Riebalai = riebalai_per_vnt * koeficientas\n- Angliavandeniai = angliavandeniai_per_vnt * koeficientas;
+  endif
+  
+  note right: ✅ Normalizuota maistinė vertė:\n• Per 100g arba 100ml\n• Paruošta rodymui vartotojui
+}
+
+|#FFE0B2|Šeimos narys|
+:Rodyti atpažinto produkto informaciją:\n- Pavadinimas\n- Kategorija\n- Maistinė vertė (per 100g/ml)\n- Confidence indikatorius;
+
+note right: ✅ Vartotojas mato:\n• Produkto pavadinimą\n• Kategoriją\n• Maistinę vertę (per 100g/ml)\n• Confidence % (0-100%)\n• Galimybę redaguoti\n• Galimybę nurodyti kiekį
+
+if ([Confidence < 0.7?]?) then (Taip)
+  :Rodyti įspėjimą:\n"Žemas tikslumas - patikrinkite";
+  :Rodyti redagavimo formą;
+endif
+
+:Patvirtinti arba redaguoti\nprodukto informaciją;
+
+if ([Vartotojas redaguoja?]?) then (Taip)
+  :Redaguoti produkto duomenis:\n- Pavadinimas\n- Kategorija\n- Maistinė vertė;
+endif
+
+if ([Vartotojas nurodė kiekį?]?) then (Taip)
+  |#C8E6C9|NutritionService|
+  :Apskaičiuoti maistinę vertę pagal nurodytą kiekį:\n- Gauti normalizuotą maistinę vertę (per 100g/ml)\n- Gauti vartotojo nurodytą kiekį (g/ml/vnt)\n- Apskaičiuoti koeficientą: kiekis / 100\n- Kalorijos = kalorijos_per_100g * koeficientas\n- Baltymai = baltymai_per_100g * koeficientas\n- Riebalai = riebalai_per_100g * koeficientas\n- Angliavandeniai = angliavandeniai_per_100g * koeficientas;
+endif
+
+if ([Vartotojas patvirtino]?) then (Taip)
+  |#E1BEE7|Supabase DB\n(inventory_items)|
+  :Paruošti duomenis įrašymui į duomenų bazę:\n- user_id (dabartinis vartotojas)\n- product_name (produkto pavadinimas iš Gemini arba redaguotas)\n- category (kategorija iš Gemini arba redaguota)\n- nutrition_info (maistinė vertė JSON formatu)\n- quantity (vartotojo nurodytas kiekis)\n- created_at (dabartinė data ir laikas);
+  :Įrašyti produktą į inventorių duomenų bazėje:\nINSERT INTO inventory_items\n(user_id, product_name, category,\n nutrition_info, quantity, created_at);
+  
+  |#FFE0B2|Šeimos narys|
+  :Rodyti sėkmės pranešimą:\n"✅ Produktas pridėtas!";
+  
+  note right: ✅ Privatumas:\n• Raw nuotrauka ištrinama\n(nebent vartotojas patvirtino išsaugojimą)
+  
+  |#C8E6C9|Posistemis|
+  :Ištrinti nuotrauką\n(temp/food_*.jpg);
+else (Ne)
+  :Atšaukti pridėjimą;
+  |#C8E6C9|Posistemis|
+  :Ištrinti laikinus failus;
+endif
+
+stop
+
+@enduml
+

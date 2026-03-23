@@ -1,0 +1,221 @@
+📦 SaldytuvasPlus (Root Package)
+│
+├── 📦 1. MemberSubsystem (Package - Subsystem)
+│   │
+│   ├── 📦 Views (Package)
+│   │   ├── 🎨 HomePage (Class, <<screen>>)
+│   │   ├── 🎨 InventoryPage (Class, <<screen>>)
+│   │   ├── 🎨 ProductDetailsPage (Class, <<screen>>)
+│   │   ├── 🎨 AddProductPage (Class, <<screen>>)
+│   │   ├── 🎨 ReceiptAndBudgetPage (Class, <<screen>>)
+│   │   ├── 🎨 DealsPage (Class, <<screen>>)
+│   │   ├── 🎨 StoreDealsPage (Class, <<screen>>)
+│   │   ├── 🎨 ShoppingListScreen (Class, <<screen>>)
+│   │   ├── 🎨 LoginPage (Class, <<screen>>)
+│   │   ├── 🎨 ProfilePage (Class, <<screen>>)
+│   │   ├── 🎨 SettingsPage (Class, <<screen>>)
+│   │   ├── 🎨 MealPlanningPage (Class, <<screen>>)
+│   │   ├── 🎨 DishDetailsPage (Class, <<screen>>)
+│   │   ├── 🎨 AddRecipePage (Class, <<screen>>)
+│   │   └── 🎨 NutritionPage (Class, <<screen>>)
+│   │
+│   └── 📦 Controllers (Package)
+│       ├── 🎛️ RouterController (Class, <<control>>)
+│       ├── 🎛️ DashboardController (Class, <<control>>)
+│       ├── 🎛️ InventoryController (Class, <<control>>)
+│       ├── 🎛️ ProductController (Class, <<control>>)
+│       ├── 🎛️ ProductScanController (Class, <<control>>)
+│       ├── 🎛️ ReceiptAndBudgetController (Class, <<control>>)
+│       ├── 🎛️ MealPlanningController (Class, <<control>>)
+│       ├── 🎛️ RecipeController (Class, <<control>>)
+│       ├── 🎛️ HealthEvaluationController (Class, <<control>>)
+│       ├── 🎛️ ShoppingListController (Class, <<control>>)
+│       ├── 🎛️ DealsController (Class, <<control>>)
+│       ├── 🎛️ AuthController (Class, <<control>>)
+│       ├── 🎛️ ProfileController (Class, <<control>>)
+│       └── 🎛️ SettingsController (Class, <<control>>)
+│
+├── 📦 2. AdminSubsystem (Package - Subsystem)
+│   │
+│   └── 📦 Controllers (Package)
+│       └── 🎛️ ShoppingListController (Class, <<control>>)
+│
+├── 📦 3. DomainModel (Package)
+│   │
+│   ├── 📦 Entities (Package)
+│   │   ├── 📦 Administrator (Class, <<entity>>)
+│   │   ├── 📦 Budget (Class, <<entity>>)
+│   │   ├── 📦 Category (Class, <<entity>>)
+│   │   ├── 📦 Deal (Class, <<entity>>)
+│   │   ├── 📦 Dish (Class, <<entity>>)
+│   │   ├── 📦 Environment (Class, <<entity>>)
+│   │   ├── 📦 FoodRule (Class, <<entity>>)
+│   │   ├── 📦 Inventory (Class, <<entity>>)
+│   │   ├── 📦 Member (Class, <<entity>>)
+│   │   ├── 📦 Notification (Class, <<entity>>)
+│   │   ├── 📦 NutritionPlan (Class, <<entity>>)
+│   │   ├── 📦 Product (Class, <<entity>>)
+│   │   ├── 📦 PromoFlyer (Class, <<entity>>)
+│   │   ├── 📦 Receipt (Class, <<entity>>)
+│   │   ├── 📦 ReceiptLine (Class, <<entity>>)
+│   │   ├── 📦 Recipe (Class, <<entity>>)
+│   │   ├── 📦 ShoppingList (Class, <<entity>>)
+│   │   ├── 📦 Store (Class, <<entity>>)
+│   │   └── 📦 User (Class, <<entity>>)
+│   │
+│   └── 📦 Enumerations (Package)
+│       ├── 🔢 DishType (Enumeration)
+│       ├── 🔢 FoodRuleStatus (Enumeration)
+│       ├── 🔢 Gender (Enumeration)
+│       ├── 🔢 MealPlanStatus (Enumeration)
+│       ├── 🔢 NotificationLevel (Enumeration)
+│       ├── 🔢 StorePriority (Enumeration)
+│       └── 🔢 UserRole (Enumeration)
+│
+├── 📦 4. DataAccess (Package)
+│   │
+│   ├── 📦 Repositories (Package)
+│   │   ├── 📄 IInventoryRepository (Interface)
+│   │   ├── 📄 IReceiptRepository (Interface)
+│   │   ├── 📄 IBudgetRepository (Interface)
+│   │   ├── 📄 IMealPlanRepository (Interface)
+│   │   ├── 📄 IShoppingListRepository (Interface)
+│   │   ├── 📄 IRecipeRepository (Interface)
+│   │   ├── 📄 IUserRepository (Interface)
+│   │   ├── 📄 IDealsRepository (Interface)
+│   │   ├── 📄 ICategoryRepository (Interface)
+│   │   └── 📄 INotificationRepository (Interface)
+│   │
+│   └── 📦 SupabaseGateway (Package)
+│       └── 🔌 SupabaseGateway (Class, <<boundary>>)
+│
+├── 📦 5. ExternalServices (Package)
+│   ├── 🔌 CameraGalleryBoundary (Class, <<boundary>>)
+│   ├── 🔌 GeminiServiceBoundary (Class, <<boundary>>)
+│   ├── 🔌 OCRServiceBoundary (Class, <<boundary>>)
+│   ├── 🔌 OpenFoodFactsServiceBoundary (Class, <<boundary>>)
+│   ├── 🔌 SpoonacularServiceBoundary (Class, <<boundary>>)
+│   └── 🔌 MobileScannerBoundary (Class, <<boundary>>)
+│
+├── 📦 6. Services (Package)
+│   ├── ⚙️ MealPlanningService (Class)
+│   ├── ⚙️ ShoppingListService (Class)
+│   ├── ⚙️ ReceiptParsingService (Class)
+│   ├── ⚙️ ImageProcessingService (Class)
+│   ├── ⚙️ OCRService (Class)
+│   ├── ⚙️ BarcodeScannerService (Class)
+│   ├── ⚙️ NutritionService (Class)
+│   ├── ⚙️ HealthScoreService (Class)
+│   ├── ⚙️ FoodRecognitionService (Class)
+│   ├── ⚙️ DealsScraperService (Class)
+│   ├── ⚙️ GeminiService (Class)
+│   ├── ⚙️ SpoonacularService (Class)
+│   ├── ⚙️ OpenFoodFactsService (Class)
+│   ├── ⚙️ NotificationService (Class)
+│   └── ⚙️ ProductMatchingService (Class)
+│
+├── 📦 7. Core (Package)
+│   │
+│   ├── 📦 Config (Package)
+│   │   └── ⚙️ AppConfig (Class)
+│   │
+│   ├── 📦 Errors (Package)
+│   │   ├── ⚠️ Exceptions (Class)
+│   │   └── ⚠️ Failures (Class)
+│   │
+│   ├── 📦 Network (Package)
+│   │   ├── 🌐 SupabaseClient (Class)
+│   │   └── 🌐 HttpClient (Class)
+│   │
+│   ├── 📦 Storage (Package)
+│   │   └── 💾 LocalStorage (Class)
+│   │
+│   ├── 📦 Theme (Package)
+│   │   └── 🎨 AppTheme (Class)
+│   │
+│   └── 📦 Utils (Package)
+│       └── 🔧 Helpers (Class)
+│
+└── 📦 8. Actors (Package)
+    ├── 👤 GoogleAuthentication (Actor, <<actor>>)
+    ├── 👤 FamilyAdministrator (Actor, <<actor>>)
+    ├── 👤 FamilyMember (Actor, <<actor>>)
+    ├── 👤 Guest (Actor, <<actor>>)
+    ├── 🤖 GeminiAPI (Actor, <<actor>>)
+    ├── 🤖 MLKitOCR (Actor, <<actor>>)
+    ├── 🏪 StoreWebsite (Actor, <<actor>>)
+    └── 🤖 SpoonacularAPI (Actor, <<actor>>)
+
+
+═══════════════════════════════════════════════════════════════════════════
+DEPENDENCIES (Priklausomybės)
+═══════════════════════════════════════════════════════════════════════════
+
+1. MemberSubsystem.Views ──(uses)──> MemberSubsystem.Controllers
+2. MemberSubsystem.Controllers ──(uses)──> Services
+3. MemberSubsystem.Controllers ──(uses)──> DomainModel.Entities
+4. MemberSubsystem.Controllers ──(calls)──> ExternalServices
+5. AdminSubsystem.Controllers ──(uses)──> Services
+6. AdminSubsystem.Controllers ──(uses)──> DomainModel.Entities
+7. Services ──(uses)──> DomainModel.Entities
+8. Services ──(calls)──> ExternalServices
+9. Services ──(uses)──> DataAccess.Repositories
+10. DataAccess.Repositories ──(uses)──> DataAccess.SupabaseGateway
+11. DataAccess.SupabaseGateway ──(uses)──> Core.Network.SupabaseClient
+12. ExternalServices ──(uses)──> Core.Network.HttpClient
+13. DomainModel.Entities ──(uses)──> DomainModel.Enumerations
+14. Actors.FamilyMember ──(interacts)──> MemberSubsystem.Views
+15. Actors.FamilyAdministrator ──(interacts)──> AdminSubsystem.Controllers
+
+
+═══════════════════════════════════════════════════════════════════════════
+LEGEND (Legenda)
+═══════════════════════════════════════════════════════════════════════════
+
+📦 = Package
+🎨 = Class (View/Screen)
+🎛️ = Class (Controller/BLoC)
+📦 = Class (Entity)
+🔢 = Enumeration
+📄 = Interface
+🔌 = Class (Boundary)
+⚙️ = Class (Service)
+👤 = Actor (User)
+🤖 = Actor (External System)
+⚠️ = Class (Error)
+🌐 = Class (Network)
+💾 = Class (Storage)
+🎨 = Class (Theme)
+🔧 = Class (Utility)
+
+<<screen>> = Stereotype for Views
+<<control>> = Stereotype for Controllers
+<<entity>> = Stereotype for Entities
+<<boundary>> = Stereotype for Boundaries
+<<actor>> = Stereotype for Actors
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

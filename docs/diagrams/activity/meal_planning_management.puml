@@ -1,0 +1,259 @@
+@startuml Meal Planning Management Activity Diagram
+!theme plain
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+  FontSize 10
+}
+
+title Valdyti mitybos planą - Activity Diagram
+
+|#FFE0B2|Šeimos narys|
+start
+:Atidaryti mitybos planavimo puslapį;
+
+|#C8E6C9|Posistemis|
+:Patikrinti ar yra esamas planas\n(dienų skaičius, data);
+
+note right: ============================================\nŠAKA 1: Ar yra esamas planas?\n============================================
+
+if (Yra esamas planas?) then (Taip)
+  note right: SCENARIJUS A:\nRodomas esamas planas
+  |#FFE0B2|Šeimos narys|
+  :Rodyti esamą mitybos planą\n(per dienas, valgiai, kalorijos);
+  note right: ✅ Vartotojas mato:\n• Dienos (Pirmadienis, Antradienis...)\n• Valgiai per dieną (pusryčiai, pietūs, vakarienė)\n• Kalorijų kiekis\n• Confidence indikatoriai
+else (Ne)
+  note right: SCENARIJUS B:\nNėra esamo plano
+  |#FFE0B2|Šeimos narys|
+  :Rodyti tuščią planą\narba "Generuoti naują planą" mygtuką;
+endif
+
+note right: ============================================\nCIKLAS: Vartotojo veiksmai su planu\n============================================
+
+repeat
+  |#FFE0B2|Šeimos narys|
+  :Peržiūrėti mitybos planą;
+  
+  note right: ============================================\nŠAKA 2: Ką vartotojas nori daryti?\n============================================
+  
+  if ([vartotojas paspaudė\n"Generuoti planą" / "Auto Awesome"]?) then (Taip)
+    note right: SCENARIJUS C1:\nGeneruoti naują planą
+    
+    partition "Vartotojo tikslų ir apribojimų įvedimas" {
+      |#FFE0B2|Šeimos narys|
+      :Atidaryti plano generavimo formą;
+      :Suvesti tikslus:\n- Dienos skaičius (1-7 dienos)\n- Kalorijų intervalas (pvz., 1800-2200 kcal/dienai)\n- Makroelementai (b, r, a) - neprivaloma;
+      :Suvesti apribojimus:\n- Alergijos\n- Veganas / Vegetarėtiškai\n- Dietos tipas\n- Pageidavimai;
+      :Pasirinkti kiekis variantų per valgį\n(default: 3);
+      
+      |#C8E6C9|Posistemis|
+      :Validuoti įvestus duomenis;
+      :Gauti vartotojo profilį\n(userProfile);
+      
+      |#E1BEE7|Supabase DB\n(inventory_items)|
+      :Gauti inventoriaus duomenis\nSELECT * FROM inventory_items\nWHERE user_id = ? AND deleted_at IS NULL;
+      
+      |#C8E6C9|Posistemis|
+      :Sukurti inventory snapshot\n(produktai, kiekiai, galiojimo datos);
+      note right: ✅ Turimi duomenys:\n• userProfile (tikslai, apribojimai)\n• inventorySnapshot (turimi produktai)\n• dienų_skaičius, kalorijų_intervalas
+    }
+    
+    partition "Gemini API (meal-intent generavimas)" {
+      |#C8E6C9|MealPlanningService\n(lib/services/)|
+      :Sukurti Gemini prompt su:\n- userProfile\n- inventorySnapshot\n- dienų_skaičius\n- kalorijų_intervalas;
+      
+      note right: SYSTEM PROMPT:\n• Hibridinis meal planning flow\n• Maksimum 3 variantai per valgį\n• Integruoti turimus ingredientus\n• Kalorijų balansas ±3%
+      
+      |#FFCCBC|Gemini API\n(Gemini Pro - Text)|
+      :Generuoti struktūrizuotą meal-intent JSON:\n- Dienos struktūra\n- Valgių tipai (breakfast, lunch, dinner)\n- Kalorijų paskirstymas per valgį\n- Rekomenduojami ingredientų deriniai;
+      
+      |#C8E6C9|Posistemis|
+      :Gauti meal-intent JSON nuo Gemini;
+      :Validuoti JSON struktūrą\nir kalorijų sumą;
+      
+      if (JSON validus ir\nkalorijų suma ±3% nuo tikslų?) then (Taip)
+        note right: SCENARIJUS C1A:\nGemini sėkmingai generavo meal-intent
+        :Konvertuoti meal-intent į\nstruktūrizuotą formatą;
+      else (Ne)
+        note right: SCENARIJUS C1B:\nGemini klaida arba neteisingi duomenys
+        :Loguoti klaidos pranešimą:\n"Gemini meal-intent generation failed";
+        :Naudoti fallback taisyklių rinkinį\n(lokalūs meal planning guidelines);
+        note right: FALLBACK:\nJei Gemini nepavyksta,\nnaudojame lokalias taisykles
+      endif
+    }
+    
+    partition "Spoonacular API (receptų paieška)" {
+      |#C8E6C9|MealPlanningService|
+      :Kiekvienam dienos valgiui:\nIeškoti 3 receptų variantus;
+      
+      note right: Kiekvienas valgis (breakfast/lunch/dinner):\n• Gemini meal-intent suteikia kryptį\n• Spoonacular ieško konkretių receptų\n• Maksimum 3 variantai per valgį
+      
+      repeat
+        |#FFCCBC|Spoonacular API|
+        :Ieškoti receptų pagal:\n- meal-intent kryptis\n- ingredientų deriniai\n- kalorijų intervalas\n- alergijų apribojimai;
+        
+        |#C8E6C9|Posistemis|
+        :Gauti 3 top receptų variantus\nsu confidence score;
+        :Apskaičiuoti ingredientų sutapimą\nsu inventoriaus snapshot;
+        :Apskaičiuoti trūkstamus ingredientus;
+        
+        note right: Kiekvienam variantui:\n• confidence (Spoonacular score)\n• ingredientų sutapimas %\n• trūkstami ingredientai
+      repeat while (Yra daugiau valgių\nperžiūrėti?)
+      
+      note right: ✅ Gauti visi receptai\n(kiekvienam valgiui 3 variantai)
+    }
+    
+    partition "Variantų sujungimas ir kalorijų perskaičiavimas" {
+      |#C8E6C9|MealPlanningService|
+      :Sujungti Gemini meal-intent\nsu Spoonacular receptais;
+      
+      note right: LOGIKA:\n• Variantas A: Pirminis Gemini + Spoonacular top match\n• Variantas B/C: Spoonacular alternatyvos\n• Maksimum 3 variantai per valgį
+      
+      :Perskaičiuoti kalorijas\n(pagal Spoonacular ingredientus);
+      :Patikrinti ar kalorijų suma\n±3% nuo vartotojo tikslo;
+      
+      if (Kalorijų suma > ±3%?) then (Taip)
+        :Koreguoti porcijų dydžius\narba ingredientų kiekius;
+        note right: KOREKCIJA:\nJei kalorijos per daug/per mažai,\nkeičiame porcijų dydžius
+      endif
+      
+      :Apskaičiuoti ingredientų\npanaudojimo procentą iš inventoriaus;
+      :Sukurti trūkstamų ingredientų sąrašą;
+      
+      note right: ✅ Planas sukurtas:\n• 3 variantai per valgį\n• Kalorijų balansas patikrintas\n• Ingredientų integracija su inventoriaus
+    }
+    
+    |#FFE0B2|Šeimos narys|
+    :Rodyti sugeneruotą planą\nsu variantų pasirinkimu;
+    note right: UI rodo:\n• Dienos ir valgiai\n• 3 variantai per valgį (su confidence)\n• Kalorijų kiekis\n• Ingredientų sutapimas %
+    
+  else ([vartotojas paspaudė\n"Pakeisti" ant konkretaus valgio]?) then (Taip)
+    note right: SCENARIJUS C2:\nPakeisti konkretų valgį
+    
+    |#C8E6C9|Posistemis|
+    :Gauti konkretų valgį\n(day, mealType, currentMeal);
+    
+    note right: ============================================\nŠAKA 3: Kaip pakeisti valgį?\n============================================
+    
+    if ([vartotojas paspaudė\n"Regeneruoti variantus"]?) then (Taip)
+      note right: SCENARIJUS C2A:\nRegeneruoti variantus
+      |#C8E6C9|MealPlanningService|
+      :Gauti vartotojo profilį ir inventoriaus\nsnapshot;
+      :Generuoti naujus 3 variantus\n(ta pati logika kaip C1);
+      
+      |#FFE0B2|Šeimos narys|
+      :Rodyti naujus variantus;
+      
+      if ([vartotojas pasirinko variantą]?) then (Taip)
+        |#C8E6C9|Posistemis|
+        :Atnaujinti valgį planuose\n(day, mealType) = selectedVariant;
+        note right: ✅ Valgis atnaujintas\n→ Grįžti į ciklą
+      else (Ne)
+        note right: Vartotojas atšaukė\n→ Grįžti į ciklą be pakeitimų
+      endif
+      
+    else ([vartotojas paspaudė\n"Pridėti ranka"]?)
+      note right: SCENARIJUS C2B:\nPridėti receptą ranka
+      |#C8E6C9|Posistemis|
+      :Atidaryti recepto pridėjimo formą;
+      
+      |#FFE0B2|Šeimos narys|
+      :Suvesti recepto informaciją:\n- Pavadinimas\n- Ingredientai\n- Kalorijos per porciją\n- Porcijų dydis;
+      
+      |#C8E6C9|Posistemis|
+      :Sukurti Meal objektą\nsu rankiniu įvedimu;
+      :Atnaujinti valgį planuose\n(day, mealType) = manualMeal;
+      note right: ✅ Receptas pridėtas ranka\n→ Grįžti į ciklą
+      
+    else ([vartotojas paspaudė\n"Lock valgį" / "Fiksuoti"]?)
+      note right: SCENARIJUS C2C:\nLock valgį (fiksuoti)
+      |#C8E6C9|Posistemis|
+      :Pažymėti valgį kaip locked\n(meal.isLocked = true);
+      note right: ✅ Valgis užrakintas\n(nebus keičiamas automatiniu regeneravimu)\n→ Grįžti į ciklą
+      
+    else ([vartotojas paspaudė\n"Pašalinti valgį"]?)
+      note right: SCENARIJUS C2D:\nPašalinti valgį
+      |#C8E6C9|Posistemis|
+      :Rodyti patvirtinimo dialogą:\n"Ar tikrai norite pašalinti\n[valgio pavadinimas]?";
+      
+      |#FFE0B2|Šeimos narys|
+      if ([vartotojas patvirtino\npašalinimą]?) then (Taip)
+        |#C8E6C9|Posistemis|
+        :Pašalinti valgį iš plano\n(day, mealType) = null;
+        note right: ✅ Valgis pašalintas\n→ Grįžti į ciklą
+      else (Ne)
+        note right: Vartotojas atšaukė\n→ Grįžti į ciklą be pakeitimų
+      endif
+    endif
+    
+  else ([vartotojas paspaudė\n"Pridėti receptą" (FAB)]?)
+    note right: SCENARIJUS C3:\nPridėti naują receptą į planą
+    
+    |#C8E6C9|Posistemis|
+    :Atidaryti recepto pridėjimo formą;
+    
+    |#FFE0B2|Šeimos narys|
+    :Pasirinkti dieną ir valgio tipą\n(breakfast, lunch, dinner);
+    :Suvesti recepto informaciją:\n- Pavadinimas\n- Ingredientai\n- Kalorijos\n- Porcijų dydis;
+    
+    |#C8E6C9|Posistemis|
+    :Sukurti Meal objektą;
+    :Pridėti į planą\n(day, mealType) = newMeal;
+    note right: ✅ Receptas pridėtas\n→ Grįžti į ciklą
+    
+  else ([vartotojas paspaudė\n"Regeneruoti visą planą"]?)
+    note right: SCENARIJUS C4:\nRegeneruoti visą planą\n(neužrakintus valgius)
+    
+    |#C8E6C9|MealPlanningService|
+    :Gauti esamą planą;
+    :Filtruoti užrakintus valgius\n(locked meals nekeičiami);
+    
+    :Regeneruoti neužrakintus valgius\n(ta pati logika kaip SCENARIJUS C1);
+    
+    |#FFE0B2|Šeimos narys|
+    :Rodyti atnaujintą planą;
+    note right: ✅ Planas regeneruotas\n(užrakinti valgiai liko nepakitę)\n→ Grįžti į ciklą
+    
+  else ([vartotojas paspaudė\n"Išsaugoti planą" / "Patvirtinti"]?)
+    note right: SCENARIJUS C5:\nIšsaugoti planą
+    
+    partition "Shopping List generacija" {
+      |#C8E6C9|ShoppingListService\n(lib/services/)|
+      :Analizuoti visus plano valgius\nir ingredientus;
+      
+      :Konvertuoti kiekius į SI vienetus\n(gramai, mililitrai, vnt);
+      
+      |#E1BEE7|Supabase DB\n(inventory_items)|
+      :Palyginti su esamu inventoriaus kiekiu\nSELECT * FROM inventory_items\nWHERE user_id = ?;
+      
+      |#C8E6C9|Posistemis|
+      :Identifikuoti trūkstamus ingredientus\n(missingIngredient kai kiekis < 0);
+      
+      :Grupavimas pagal parduotuvės kategorijas\n(Maxima, Lidl, IKI, Rimi) pagal deals;
+      
+      :Sukurti ShoppingList objektą\nsu prioritetais:\n- critical (reikia šiandien)\n- soon\n- optional;
+      
+      note right: ✅ Shopping list sugeneruotas\n→ Įrašyti į Supabase
+    }
+    
+    |#E1BEE7|Supabase DB\n(meal_plans)|
+    :Įrašyti mitybos planą į DB:\n- user_id\n- plan_start_date\n- plan_end_date\n- meals (JSON)\n- locked_meals (JSON);
+    
+    |#E1BEE7|Supabase DB\n(shopping_lists)|
+    :Įrašyti shopping list\nį shopping_lists lentelę;
+    
+    |#C8E6C9|Posistemis|
+    :Atnaujinti UI\n(shopping list kortelė, planas);
+    
+    |#FFE0B2|Šeimos narys|
+    :Rodyti sėkmės pranešimą:\n"✅ Planas išsaugotas!\n🛒 Pirkinių sąrašas sugeneruotas";
+    
+    note right: ✅ Ciklas baigtas\n→ Procesas užbaigtas
+  endif
+  
+repeat while ([vartotojas DAR NEBALIGIA\nplaną arba NEIŠSAUGOJO]?)
+
+stop
+
+@enduml
+

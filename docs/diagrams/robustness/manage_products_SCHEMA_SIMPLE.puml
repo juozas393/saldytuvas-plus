@@ -1,0 +1,117 @@
+@startuml Manage Products Schema - Very Simple
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Schema - Valdyti produktus (Paprasčiausia versija)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' UI BOUNDARIES (Langai)
+' ============================================
+rectangle "Inventoriaus langas" <<boundary>> as InventoryPage
+rectangle "Produkto pridėjimo langas" <<boundary>> as AddProductPage
+rectangle "Produkto kortelės langas" <<boundary>> as ProductDetailPage
+
+' ============================================
+' CONTROLLER (Flutter BLoC)
+' ============================================
+rectangle "InventoryBloc\n(BLoC)" <<control>> as InventoryBloc
+
+' ============================================
+' EXTERNAL BOUNDARIES
+' ============================================
+rectangle "Supabase API" <<boundary>> as Supabase
+rectangle "Open Food Facts API" <<boundary>> as OpenFoodAPI
+rectangle "Mobile Scanner" <<boundary>> as BarcodeScanner
+rectangle "Image Picker\n(Kamera/Galerija)" <<boundary>> as ImagePicker
+
+' ============================================
+' ENTITIES
+' ============================================
+rectangle "Product" <<entity>> as Product
+rectangle "InventoryItem" <<entity>> as InventoryItem
+
+' ============================================
+' PAGRINDINIAI RYŠIAI
+' ============================================
+
+' User → UI Boundaries
+User --> InventoryPage
+User --> AddProductPage
+User --> ProductDetailPage
+
+' UI Boundaries → Controller
+InventoryPage --> InventoryBloc
+AddProductPage --> InventoryBloc
+ProductDetailPage --> InventoryBloc
+
+' Controller → External Boundaries
+InventoryBloc --> Supabase
+InventoryBloc --> OpenFoodAPI
+InventoryBloc --> BarcodeScanner
+InventoryBloc --> ImagePicker
+
+' Controller → Entities
+InventoryBloc --> Product
+InventoryBloc --> InventoryItem
+
+' External Boundaries → Controller (atsakymai)
+Supabase --> InventoryBloc
+OpenFoodAPI --> InventoryBloc
+BarcodeScanner --> InventoryBloc
+ImagePicker --> InventoryBloc
+
+' Controller → UI Boundaries (atsakymai)
+InventoryBloc --> InventoryPage
+InventoryBloc --> AddProductPage
+InventoryBloc --> ProductDetailPage
+
+note bottom
+  **SCHEMA SANTRAUKA:**
+  
+  **3 UI Boundaries** (Langai)
+  **1 Controller** (InventoryBloc - Flutter BLoC)
+  **4 External Boundaries** (Išorinės sistemos)
+  **2 Entities** (Product, InventoryItem)
+  
+  **Kaip veikia:**
+  User → UI Boundary → Controller → External Boundary/Entity
+  External Boundary/Entity → Controller → UI Boundary → User
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

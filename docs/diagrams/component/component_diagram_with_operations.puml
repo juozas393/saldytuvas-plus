@@ -1,0 +1,165 @@
+@startuml Saldytuvas Plus - Komponentų Diagrama su Controllerių Operacijomis
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Komponentų Diagrama su Controllerių Operacijomis
+
+' ============================================
+' CONTROLLERS SU OPERACIJOMIS
+' ============================================
+
+component "RecipeController" as RecipeController {
+  interface "IRecipeController" as IRecipeController {
+    + createRecipe(recipe)
+    + getRecipe(id)
+    + updateRecipe(id, recipe)
+    + deleteRecipe(id)
+    + listRecipes()
+    + searchRecipes(query)
+  }
+  RecipeController .. IRecipeController
+}
+
+component "AuthController" as AuthController {
+  interface "IAuthController" as IAuthController {
+    + login(email, password)
+    + register(email, password, name)
+    + logout()
+    + resetPassword(email)
+    + verifyEmail(token)
+    + refreshToken()
+  }
+  AuthController .. IAuthController
+}
+
+component "ProfileController" as ProfileController {
+  interface "IProfileController" as IProfileController {
+    + getProfile(userId)
+    + updateProfile(userId, profile)
+    + changePassword(userId, oldPassword, newPassword)
+    + updatePreferences(userId, preferences)
+  }
+  ProfileController .. IProfileController
+}
+
+component "SettingsController" as SettingsController {
+  interface "ISettingsController" as ISettingsController {
+    + getSettings(userId)
+    + updateSettings(userId, settings)
+    + getNotificationSettings(userId)
+    + updateNotificationSettings(userId, settings)
+  }
+  SettingsController .. ISettingsController
+}
+
+component "DashBoardController" as DashBoardController {
+  interface "IDashBoardController" as IDashBoardController {
+    + getDashboardData(userId)
+    + getSummary(userId)
+    + getRecentActivity(userId)
+    + getExpiringProducts(userId)
+  }
+  DashBoardController .. IDashBoardController
+}
+
+component "DealsController" as DealsController {
+  interface "IDealsController" as IDealsController {
+    + getDeals(storeId)
+    + getDealById(id)
+    + filterDeals(category, storeId)
+    + searchDeals(query)
+  }
+  DealsController .. IDealsController
+}
+
+component "BudgetController" as BudgetController {
+  interface "IBudgetController" as IBudgetController {
+    + setBudget(familyId, budget)
+    + getBudget(familyId)
+    + updateBudget(familyId, budget)
+    + getBudgetAlerts(familyId)
+    + setBudgetAlertThreshold(familyId, threshold)
+    + getBudgetSummary(familyId, period)
+  }
+  BudgetController .. IBudgetController
+}
+
+component "FamilyMembersController" as FamilyMembersController {
+  interface "IFamilyMembersController" as IFamilyMembersController {
+    + addMember(familyId, member)
+    + removeMember(familyId, memberId)
+    + updateMember(familyId, memberId, member)
+    + listMembers(familyId)
+    + setPermissions(familyId, memberId, permissions)
+    + getMember(familyId, memberId)
+  }
+  FamilyMembersController .. IFamilyMembersController
+}
+
+component "FoodRulesController" as FoodRulesController {
+  interface "IFoodRulesController" as IFoodRulesController {
+    + getFoodRules(familyId)
+    + createFoodRule(familyId, rule)
+    + updateFoodRule(familyId, ruleId, rule)
+    + deleteFoodRule(familyId, ruleId)
+    + getFoodRuleById(familyId, ruleId)
+  }
+  FoodRulesController .. IFoodRulesController
+}
+
+component "FoodSubstituteController" as FoodSubstituteController {
+  interface "IFoodSubstituteController" as IFoodSubstituteController {
+    + getSubstitutes(productId)
+    + suggestSubstitute(productId, reason)
+    + addSubstitute(productId, substituteId)
+    + removeSubstitute(productId, substituteId)
+  }
+  FoodSubstituteController .. IFoodSubstituteController
+}
+
+' ============================================
+' RYŠIAI SU DOMAIN MODEL
+' ============================================
+package "DomainModel" {
+  [Recipe] as RecipeEntity
+  [User] as UserEntity
+  [Settings] as SettingsEntity
+  [Deal] as DealEntity
+  [Budget] as BudgetEntity
+  [Member] as MemberEntity
+  [FoodRule] as FoodRuleEntity
+  [Product] as ProductEntity
+}
+
+' ============================================
+' RYŠIAI: Controllers → DomainModel
+' ============================================
+RecipeController --> RecipeEntity : uses
+AuthController --> UserEntity : uses
+ProfileController --> UserEntity : uses
+SettingsController --> SettingsEntity : uses
+DashBoardController --> ProductEntity : uses
+DealsController --> DealEntity : uses
+BudgetController --> BudgetEntity : uses
+FamilyMembersController --> MemberEntity : uses
+FoodRulesController --> FoodRuleEntity : uses
+FoodSubstituteController --> ProductEntity : uses
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Komponentai:**
+  - Controller: Valdo verslo logiką
+  - Interface: Provided interface su operacijomis
+  - DomainModel: Duomenų modeliai
+  
+  **Ryšiai:**
+  --> : uses (dependency)
+  .. : realizes (interface realization)
+endlegend
+
+@enduml
+

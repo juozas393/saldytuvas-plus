@@ -1,0 +1,117 @@
+@startuml Saldytuvas Plus - Deployment Diagrama (Development)
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Deployment Diagrama (Development)
+
+' ============================================
+' CLIENT DEVICES (Vartotojo įrenginiai)
+' ============================================
+
+node "Developer Machine" <<device>> as DevMachine {
+  component instance "Flutter App" <<application>> as FlutterApp {
+    artifact "app-debug.apk" as AndroidDebugAPK
+    artifact "app-debug.ipa" as IOSDebugIPA
+  }
+}
+
+' ============================================
+' LOCAL INFRASTRUCTURE (Development)
+' ============================================
+
+node "Local Development Server" <<executionEnvironment>> as LocalServer {
+  component instance "Supabase Local" <<database>> as SupabaseLocal {
+    database "PostgreSQL (Local)" as LocalPostgreSQL {
+      artifact "database.ddl" as DatabaseDdl
+      artifact "migrations/*.sql" as Migrations
+    }
+  }
+  
+  component instance "Supabase Auth (Local)" <<service>> as SupabaseAuthLocal
+  component instance "Supabase Storage (Local)" <<storage>> as SupabaseStorageLocal
+}
+
+' ============================================
+' EXTERNAL APIs (Development)
+' ============================================
+
+node "External APIs" <<executionEnvironment>> as ExternalAPIs {
+  component instance "Gemini API" <<server>> as GeminiAPI
+  component instance "Spoonacular API" <<server>> as SpoonacularAPI
+  component instance "OpenFoodFacts API" <<server>> as OpenFoodFactsAPI
+}
+
+' ============================================
+' RYŠIAI: Client → Local Infrastructure
+' ============================================
+
+FlutterApp ..> SupabaseLocal : HTTP (localhost)\n<<use>>
+FlutterApp ..> SupabaseAuthLocal : HTTP (localhost)\n<<use>>
+FlutterApp ..> SupabaseStorageLocal : HTTP (localhost)\n<<use>>
+
+FlutterApp ..> GeminiAPI : HTTPS\n<<use>>
+FlutterApp ..> SpoonacularAPI : HTTPS\n<<use>>
+FlutterApp ..> OpenFoodFactsAPI : HTTPS\n<<use>>
+
+' ============================================
+' RYŠIAI: Supabase Local vidiniai
+' ============================================
+
+SupabaseLocal ..> LocalPostgreSQL : uses
+LocalPostgreSQL ..> DatabaseDdl <<manifest>>
+LocalPostgreSQL ..> Migrations <<manifest>>
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Deployment Node'ų tipai:**
+  - <<device>> : Vartotojo įrenginys
+  - <<executionEnvironment>> : Execution Environment
+  - <<database>> : Duomenų bazė
+  - <<server>> : Serveris/Paslauga
+  - <<storage>> : Saugykla
+  - <<application>> : Aplikacija
+  
+  **Ryšiai:**
+  ..> : komunikacija (HTTP/HTTPS)
+  <<manifest>> : manifestuoja (fizinis failas)
+  <<use>> : naudoja
+endlegend
+
+note right of DevMachine
+  **Development Deployment:**
+  - Android: Debug APK
+  - iOS: Debug IPA
+  - Flutter build: `flutter run`
+  - Lokalus Supabase: `supabase start`
+end note
+
+note right of LocalServer
+  **Local Supabase Infrastructure:**
+  - Lokalus PostgreSQL (localhost:54322)
+  - Lokalus Auth (localhost:54321)
+  - Lokalus Storage (localhost:54321)
+  - Naudojama tik development metu
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

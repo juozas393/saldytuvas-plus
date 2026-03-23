@@ -1,0 +1,150 @@
+@startuml Manage Products Robustness - Simple
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Robustumo diagrama - Valdyti produktus (Paprasta versija)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' UI BOUNDARIES (Langai)
+' ============================================
+rectangle "Inventoriaus langas" <<boundary>> as InventoryPage
+rectangle "Produkto pridėjimo langas" <<boundary>> as AddProductPage
+rectangle "Produkto kortelės langas" <<boundary>> as ProductDetailPage
+
+' ============================================
+' CONTROLLERS (Verslo logika)
+' ============================================
+rectangle "InventoryBloc\n(Valdymas)" <<control>> as InventoryBloc
+rectangle "AddProductUseCase\n(Pridėjimas)" <<control>> as AddProductUseCase
+rectangle "BarcodeScannerService\n(Barcode)" <<control>> as BarcodeService
+rectangle "OpenFoodFactsService\n(Produkto duomenys)" <<control>> as OpenFoodService
+rectangle "ImageProcessingService\n(Nuotraukų apdorojimas)" <<control>> as ImageService
+rectangle "OCRService\n(OCR)" <<control>> as OCRService
+rectangle "ReceiptParsingService\n(Čekių parsavimas)" <<control>> as ReceiptService
+
+' ============================================
+' EXTERNAL BOUNDARIES (Išorinės sistemos)
+' ============================================
+rectangle "Supabase API\n(DB)" <<boundary>> as Supabase
+rectangle "Open Food Facts API\n(Produktų duomenys)" <<boundary>> as OpenFoodAPI
+rectangle "Mobile Scanner\n(Barcode)" <<boundary>> as BarcodeScanner
+rectangle "Image Picker\n(Kamera/Galerija)" <<boundary>> as ImagePicker
+rectangle "ML Kit OCR\n(Tekstų atpažinimas)" <<boundary>> as MLKitOCR
+rectangle "Gemini API\n(AI analizė)" <<boundary>> as GeminiAPI
+
+' ============================================
+' ENTITIES (Duomenų modeliai)
+' ============================================
+rectangle "Product\n(Produktas)" <<entity>> as Product
+rectangle "InventoryItem\n(Inventoriaus elementas)" <<entity>> as InventoryItem
+
+' ============================================
+' PAGRINDINIAI RYŠIAI
+' ============================================
+
+' User → UI Boundaries
+User --> InventoryPage : peržiūrėti produktus
+User --> AddProductPage : pridėti produktą
+User --> ProductDetailPage : redaguoti/ištrinti
+
+' UI Boundaries → Controllers
+InventoryPage --> InventoryBloc : įvykiai (Load, Add, Update, Delete)
+AddProductPage --> InventoryBloc : įvykiai (Add, Scan, ProcessImage)
+ProductDetailPage --> InventoryBloc : įvykiai (Update, Delete)
+
+' Controllers → Use Cases
+InventoryBloc --> AddProductUseCase : prideda produktą
+
+' Controllers → Services
+InventoryBloc --> BarcodeService : skenuoja barcode
+InventoryBloc --> OpenFoodService : gauna produkto duomenis
+InventoryBloc --> ImageService : apdoroja nuotrauką
+InventoryBloc --> OCRService : atpažįsta tekstą
+InventoryBloc --> ReceiptService : analizuoja čekį
+
+' Services → External Boundaries
+BarcodeService --> BarcodeScanner : skaito barcode
+BarcodeService --> OpenFoodAPI : produkto duomenys pagal barcode
+OpenFoodService --> OpenFoodAPI : HTTP užklausa (produktų duomenys)
+ImageService --> ImagePicker : gauna nuotrauką (kamera/galerija)
+OCRService --> MLKitOCR : atpažįsta tekstą iš nuotraukos
+ReceiptService --> GeminiAPI : analizuoja čekį (AI)
+
+' Controllers → External Boundaries
+InventoryBloc --> Supabase : CRUD operacijos (produktai)
+AddProductUseCase --> Supabase : įrašo produktą į DB
+
+' Services → Entities
+OpenFoodService --> Product : sukuria Product iš API
+AddProductUseCase --> Product : sukuria/atnaujina Product
+AddProductUseCase --> InventoryItem : sukuria/atnaujina InventoryItem
+
+' Controllers → Entities
+InventoryBloc --> Product : valdo Product objektą
+InventoryBloc --> InventoryItem : valdo InventoryItem objektą
+
+' External Boundaries → Controllers (atsakymai)
+Supabase --> InventoryBloc : grąžina produktų sąrašą
+OpenFoodAPI --> OpenFoodService : grąžina produkto duomenis
+BarcodeScanner --> BarcodeService : grąžina barcode
+ImagePicker --> ImageService : grąžina nuotrauką
+MLKitOCR --> OCRService : grąžina atpažintą tekstą
+GeminiAPI --> ReceiptService : grąžina JSON su produktais
+
+' Controllers → UI Boundaries (atsakymai)
+InventoryBloc --> InventoryPage : būsenos (ProductsLoaded, ProductAdded, ir t.t.)
+InventoryBloc --> AddProductPage : būsenos (ProductScanned, Error, ir t.t.)
+InventoryBloc --> ProductDetailPage : būsenos (ProductUpdated, ProductDeleted)
+
+note right of ImagePicker
+  **Image Picker Boundary** apima:
+  - Kamerą (foto)
+  - Galeriją (pasirinkti nuotrauką)
+  - Leidimų valdymą
+end note
+
+note right of InventoryBloc
+  **InventoryBloc** koordinuoja:
+  - Visus produktų valdymo procesus
+  - Barcode skenavimą
+  - Čekių apdorojimą
+  - CRUD operacijas
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,108 @@
+# GitHub Actions Workflow for Automated Promotions Scraping
+# Runs daily to fetch the latest food promotions from Lithuanian stores
+
+name: Scrape Store Promotions
+
+on:
+  # Run daily at 6:00 AM UTC (8:00 AM Lithuania time)
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update mobile app data'
+        required: false
+        default: 'true'
+        type: boolean
+      stores:
+        description: 'Stores to scrape (comma-separated: lidl,iki,rimi,norfa or "all")'
+        required: false
+        default: 'all'
+        type: string
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: scraper/package-lock.json
+      
+      - name: Install Playwright browsers
+        run: |
+          cd scraper
+          npm ci
+          npx playwright install chromium
+      
+      - name: Run Lidl Scraper
+        run: |
+          cd scraper
+          npm run scrape:lidl
+          echo "Lidl products: $(cat lidl_products.json | jq length)"
+      
+      - name: Run IKI Scraper
+        run: |
+          cd scraper
+          npm run scrape:iki
+          echo "IKI products: $(cat iki_products.json | jq length)"
+      
+      - name: Run Rimi Scraper
+        continue-on-error: true
+        run: |
+          cd scraper
+          npm run scrape:rimi
+          echo "Rimi products: $(cat rimi_products.json | jq length)"
+      
+      - name: Run Norfa Scraper
+        continue-on-error: true
+        run: |
+          cd scraper
+          npm run scrape:norfa
+          echo "Norfa products: $(cat norfa_products.json | jq length)"
+      
+      - name: Copy data to mobile app
+        run: |
+          mkdir -p mobile/src/data
+          cp scraper/lidl_products.json mobile/src/data/lidl_products.json
+          [ -f scraper/iki_products.json ] && cp scraper/iki_products.json mobile/src/data/iki_products.json || echo "No IKI data"
+          [ -f scraper/rimi_products.json ] && cp scraper/rimi_products.json mobile/src/data/rimi_products.json || echo "No Rimi data"
+          [ -f scraper/norfa_products.json ] && cp scraper/norfa_products.json mobile/src/data/norfa_products.json || echo "No Norfa data"
+          echo "Data copied to mobile app"
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Add all product JSON files
+          git add mobile/src/data/*_products.json scraper/*_products.json || true
+          
+          # Check if there are changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "🛒 Auto-update store promotions [$(date +'%Y-%m-%d')]"
+            git push
+          fi
+      
+      - name: Upload scrape results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-promotions-${{ github.run_number }}
+          path: |
+            scraper/lidl_products.json
+            scraper/iki_products.json
+            scraper/rimi_products.json
+            scraper/norfa_products.json
+          retention-days: 7

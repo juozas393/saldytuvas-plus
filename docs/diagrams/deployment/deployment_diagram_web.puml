@@ -1,0 +1,145 @@
+@startuml Saldytuvas Plus - Deployment Diagrama (Web Application)
+!theme plain
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Saldytuvas Plus - Deployment Diagrama (Web Application - Production)
+
+' ============================================
+' CLIENT DEVICES (Vartotojo įrenginiai)
+' ============================================
+
+node "Client Device" <<device>> as ClientDevice {
+  artifact "browser" as Browser
+}
+
+' ============================================
+' CLOUD INFRASTRUCTURE
+' ============================================
+
+node "Supabase Cloud" <<executionEnvironment>> as SupabaseCloud {
+  component instance "Supabase Database" <<database>> as SupabaseDB {
+    database "PostgreSQL" as PostgreSQL
+  }
+  
+  component instance "Supabase Auth" <<service>> as SupabaseAuth
+  component instance "Supabase Storage" <<storage>> as SupabaseStorage
+  component instance "Supabase Edge Functions" <<server>> as SupabaseEdge
+  
+  artifact "database.ddl" as DatabaseDdl
+  artifact "migrations/*.sql" as Migrations
+}
+
+node "Web Hosting" <<executionEnvironment>> as WebHosting {
+  component instance "Flutter Web App" <<application>> as FlutterWebApp {
+    artifact "clientPages/*.dart" as ClientPagesArtifact
+    artifact "clientControllers/*.dart" as ClientControllersArtifact
+    artifact "models/*.dart" as ModelsArtifact
+    artifact "services/*.dart" as ServicesArtifact
+    artifact "repositories/*.dart" as RepositoriesArtifact
+  }
+}
+
+node "External APIs" <<executionEnvironment>> as ExternalAPIs {
+  component instance "Gemini API" <<server>> as GeminiAPI
+  component instance "Spoonacular API" <<server>> as SpoonacularAPI
+  component instance "OpenFoodFacts API" <<server>> as OpenFoodFactsAPI
+}
+
+' ============================================
+' RYŠIAI: Client → Web Hosting
+' ============================================
+
+ClientDevice ..> WebHosting : HTTPS\n<<use>>
+
+' ============================================
+' RYŠIAI: Web Hosting → Supabase Cloud
+' ============================================
+
+FlutterWebApp ..> SupabaseDB : HTTPS\n<<use>>
+FlutterWebApp ..> SupabaseAuth : HTTPS\n<<use>>
+FlutterWebApp ..> SupabaseStorage : HTTPS\n<<use>>
+
+' ============================================
+' RYŠIAI: Web Hosting → External APIs
+' ============================================
+
+FlutterWebApp ..> GeminiAPI : HTTPS\n<<use>>
+FlutterWebApp ..> SpoonacularAPI : HTTPS\n<<use>>
+FlutterWebApp ..> OpenFoodFactsAPI : HTTPS\n<<use>>
+
+' ============================================
+' RYŠIAI: Supabase vidiniai
+' ============================================
+
+SupabaseDB ..> PostgreSQL : uses
+PostgreSQL ..> DatabaseDdl <<manifest>>
+PostgreSQL ..> Migrations <<manifest>>
+
+SupabaseEdge ..> SupabaseDB : uses
+
+' ============================================
+' LEGEND
+' ============================================
+legend right
+  **Deployment Node'ų tipai:**
+  - <<device>> : Vartotojo įrenginys
+  - <<executionEnvironment>> : Execution Environment (Cloud/Server)
+  - <<database>> : Duomenų bazė
+  - <<server>> : Serveris/Paslauga
+  - <<storage>> : Saugykla
+  - <<application>> : Aplikacija
+  
+  **Ryšiai:**
+  ..> : komunikacija (HTTPS)
+  <<manifest>> : manifestuoja (fizinis failas)
+  <<use>> : naudoja
+endlegend
+
+note right of ClientDevice
+  **Web Client:**
+  - Browser (Chrome, Firefox, Safari, Edge)
+  - Veikia visose platformose
+  - Nereikia instaliacijos
+  - Artifact: browser
+end note
+
+note right of WebHosting
+  **Web Hosting (Flutter Web):**
+  - Firebase Hosting / Vercel / Netlify
+  - Flutter build: `flutter build web`
+  - Compiled Dart → JavaScript
+  - Artifacts: clientPages/*.dart, 
+    clientControllers/*.dart,
+    models/*.dart, services/*.dart,
+    repositories/*.dart
+end note
+
+note right of SupabaseCloud
+  **Supabase Cloud Infrastructure:**
+  - Managed PostgreSQL database (production)
+  - Authentication service (production)
+  - File storage (receipts, images)
+  - Edge Functions (serverless)
+  - HTTPS endpoint: https://xxx.supabase.co
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

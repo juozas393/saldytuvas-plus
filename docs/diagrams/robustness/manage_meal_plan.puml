@@ -1,0 +1,263 @@
+@startuml Manage Meal Plan - Pilna Robustness Diagrama
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title UC "Sukurti/Redaguoti/Ištrinti mitybos planą" - Pilna Robustumo diagrama (pagal Activity Diagram)
+
+' ============================================
+' AKTORIUS
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' BOUNDARY - UI LANGAI (Kairėje pusėje)
+' ============================================
+package "UI Boundaries (Langai)" {
+  rectangle "MealPlanningPage\n(Mitybos planavimo langas)" <<boundary>> as MealPlanningPage
+}
+
+' ============================================
+' BOUNDARY - SERVISŲ ADAPTERIAI (Dešinėje pusėje)
+' ============================================
+package "Service Boundaries (Išorinės sistemos)" {
+  rectangle "GeminiServiceBoundary\n(Gemini API)" <<boundary>> as GeminiBoundary
+  rectangle "SpoonacularServiceBoundary\n(Spoonacular API)" <<boundary>> as SpoonacularBoundary
+}
+
+' ============================================
+' CONTROL OBJEKTAI (Viduryje)
+' ============================================
+package "Control (Verslo logika)" {
+  rectangle "MealPlanningController\n(Mitybos planavimo valdymas)" <<control>> as MealPlanningController
+  rectangle "MealPlanningService\n(Planų generavimas)" <<control>> as MealPlanningService
+  rectangle "ShoppingListService\n(Pirkinių sąrašo generavimas)" <<control>> as ShoppingListService
+}
+
+' ============================================
+' ENTITY OBJEKTAI (Dešinėje, po servisais)
+' ============================================
+package "Entity (Duomenys)" {
+  rectangle "Inventory\n(Inventorius)" <<entity>> as InventoryEntity
+  rectangle "MealPlan\n(Mitybos planas)" <<entity>> as MealPlanEntity
+}
+
+' ============================================
+' DATABASE (Ne boundary, implementacijos detalė)
+' ============================================
+database "Supabase DB\n(meal_plans, inventory_items,\nshopping_lists)" as Database
+
+' ============================================
+' RYŠIAI: Aktorius -> UI Boundary
+' ============================================
+User --> MealPlanningPage : "Atidaryti mitybos\nplanavimo puslapį"
+
+' ============================================
+' SCENARIJUS A: Sukurti naują planą
+' ============================================
+' 1. Tikslų ir apribojimų įvedimas
+MealPlanningPage --> MealPlanningController : "Atidaryti plano\ngeneravimo formą"
+MealPlanningPage --> MealPlanningController : "Suvesti tikslus ir\napribojimus"
+
+MealPlanningController --> MealPlanningController : "Validuoti įvestus\nduomenis"
+
+alt Duomenys validūs
+  MealPlanningController --> Database : "Gauti inventoriaus\nduomenis\nSELECT * FROM inventory_items\nWHERE user_id = ?"
+  Database --> MealPlanningController : "Inventory items"
+  
+  MealPlanningController --> InventoryEntity : "Sukurti inventory\nsnapshot"
+  InventoryEntity --> MealPlanningController : "InventorySnapshot"
+  
+  ' 2. Planų generavimas (Gemini + Spoonacular)
+  MealPlanningController --> MealPlanningService : "Generuoti planą\n(userGoals, inventorySnapshot)"
+  
+  MealPlanningService --> GeminiBoundary : "Generuoti meal-intent\nper Gemini API"
+  GeminiBoundary --> MealPlanningService : "MealIntent JSON"
+  
+  MealPlanningService --> SpoonacularBoundary : "Ieškoti receptų\n(3 variantai per valgį)"
+  SpoonacularBoundary --> MealPlanningService : "List<Recipe>"
+  
+  MealPlanningService --> MealPlanningService : "Sujungti variantus ir\nperskaičiuoti kalorijas"
+  MealPlanningService --> MealPlanningService : "Apskaičiuoti ingredientų\npanaudojimą"
+  
+  MealPlanningService --> MealPlanningController : "GeneratedMealPlan"
+  
+  MealPlanningController --> MealPlanEntity : "Sukurti planą"
+  MealPlanEntity --> MealPlanningController : "MealPlanEntity"
+  
+  MealPlanningController --> MealPlanningPage : "Rodyti sugeneruotą planą"
+  MealPlanningPage --> User : "Peržiūrėti sugeneruotą planą"
+  
+  ' 3. Patvirtinimas
+  User --> MealPlanningPage : "Patvirtinti arba atšaukti"
+  MealPlanningPage --> MealPlanningController : "ConfirmMealPlanEvent"
+  
+  alt Vartotojas patvirtino
+    MealPlanningController --> MealPlanEntity : "convertToJson()"
+    MealPlanEntity --> MealPlanningController : "JSON data"
+    
+    MealPlanningController --> Database : "Įrašyti mitybos planą\nINSERT INTO meal_plans\n(user_id, plan_start_date,\nplan_end_date, meals, locked_meals)"
+    Database --> MealPlanningController : "Inserted meal_plan (id)"
+    
+    MealPlanningController --> ShoppingListService : "Sugeneruoti pirkinių\nsąrašą pagal trūkstamus\ningredientus"
+    ShoppingListService --> ShoppingListService : "Apskaičiuoti trūkstamus\ningredientus"
+    ShoppingListService --> MealPlanningController : "ShoppingListEntity"
+    
+    MealPlanningController --> Database : "Įrašyti shopping list\nINSERT INTO shopping_lists\n(meal_plan_id, items)"
+    Database --> MealPlanningController : "Success"
+    
+    MealPlanningController --> MealPlanningPage : "MealPlanCreatedState"
+    MealPlanningPage --> User : "Rodyti sėkmės pranešimą:\n✅ Planas sukurtas!"
+  else Vartotojas atšaukia
+    MealPlanningController --> MealPlanningPage : "MealPlanCancelledState"
+    MealPlanningPage --> User : "Atšaukti sukūrimą"
+  end
+else Duomenys nevalidūs
+  MealPlanningController --> MealPlanningPage : "MealPlanValidationErrorState"
+  MealPlanningPage --> User : "Rodyti validacijos klaidas"
+end
+
+' ============================================
+' SCENARIJUS B: Redaguoti esamą planą
+' ============================================
+MealPlanningPage --> MealPlanningController : "EditMealPlanEvent"
+
+MealPlanningController --> Database : "Gauti esamą mitybos planą\nSELECT * FROM meal_plans\nWHERE user_id = ? AND id = ?"
+Database --> MealPlanningController : "MealPlan data"
+
+MealPlanningController --> MealPlanEntity : "create(data)"
+MealPlanEntity --> MealPlanningController : "MealPlanEntity"
+
+MealPlanningController --> MealPlanningPage : "Rodyti esamą planą\nredagavimo režime"
+MealPlanningPage --> User : "Rodyti esamą planą"
+
+' B1: Redaguoti konkretų valgį
+User --> MealPlanningPage : "Pasirinkti valgį\n(diena, mealType)"
+MealPlanningPage --> MealPlanningController : "EditMealEvent(day, mealType)"
+
+alt Regeneruoti variantus
+  MealPlanningController --> MealPlanningService : "Generuoti naujus 3 variantus\n(ta pati logika kaip sukūrimas)"
+  MealPlanningService --> GeminiBoundary : "Generuoti meal-intent"
+  MealPlanningService --> SpoonacularBoundary : "Ieškoti receptų"
+  MealPlanningService --> MealPlanningController : "GeneratedMealVariants"
+  
+  MealPlanningController --> MealPlanningPage : "Rodyti variantus"
+  MealPlanningPage --> User : "Pasirinkti naują variantą"
+  
+else Pridėti ranka
+  User --> MealPlanningPage : "Suvesti recepto informaciją"
+  MealPlanningPage --> MealPlanningController : "AddManualMealEvent(mealData)"
+  
+  MealPlanningController --> MealPlanEntity : "Sukurti Meal objektą"
+  MealPlanEntity --> MealPlanningController : "Meal"
+  
+else Lock/Unlock valgį
+  User --> MealPlanningPage : "Perjungti locked būseną"
+  MealPlanningPage --> MealPlanningController : "ToggleMealLockEvent(day, mealType)"
+  
+  MealPlanningController --> MealPlanEntity : "Perjungti valgio locked būseną\n(meal.isLocked = !meal.isLocked)"
+  MealPlanEntity --> MealPlanningController : "Updated MealPlan"
+end
+
+MealPlanningController --> MealPlanEntity : "convertToJson()"
+MealPlanEntity --> MealPlanningController : "JSON data"
+
+MealPlanningController --> Database : "Atnaujinti valgį plano duomenyse\nUPDATE meal_plans SET meals = ?\nWHERE id = ?"
+Database --> MealPlanningController : "Success"
+
+' B2: Pridėti naują valgį
+User --> MealPlanningPage : "Pasirinkti dieną ir valgio tipą"
+MealPlanningPage --> MealPlanningController : "AddNewMealEvent(day, mealType, recipe)"
+
+MealPlanningController --> MealPlanEntity : "Pridėti valgį į planą"
+MealPlanEntity --> MealPlanningController : "Updated MealPlan"
+
+MealPlanningController --> Database : "Atnaujinti planą su nauju valgiu\nUPDATE meal_plans SET meals = ?\nWHERE id = ?"
+Database --> MealPlanningController : "Success"
+
+' B3: Pašalinti valgį
+User --> MealPlanningPage : "Pasirinkti valgį pašalinimui"
+MealPlanningPage --> MealPlanningController : "RemoveMealEvent(day, mealType)"
+
+MealPlanningController --> MealPlanEntity : "Pašalinti valgį iš plano\n(day, mealType) = null"
+MealPlanEntity --> MealPlanningController : "Updated MealPlan"
+
+MealPlanningController --> Database : "Atnaujinti planą\nUPDATE meal_plans SET meals = ?\nWHERE id = ?"
+Database --> MealPlanningController : "Success"
+
+' B4: Regeneruoti visą planą
+User --> MealPlanningPage : "Regeneruoti visą planą"
+MealPlanningPage --> MealPlanningController : "RegenerateMealPlanEvent"
+
+MealPlanningController --> MealPlanningService : "Filtruoti užrakintus valgius\n(locked meals nekeičiami)"
+MealPlanningService --> MealPlanningService : "Regeneruoti neužrakintus valgius"
+MealPlanningService --> MealPlanningController : "RegeneratedMealPlan"
+
+MealPlanningController --> Database : "Atnaujinti visą planą\nUPDATE meal_plans SET meals = ?\nWHERE id = ?"
+Database --> MealPlanningController : "Success"
+
+' Atnaujinti shopping list po redagavimo
+MealPlanningController --> ShoppingListService : "Atnaujinti pirkinių sąrašą\npagal pakeitimus"
+ShoppingListService --> ShoppingListService : "Apskaičiuoti trūkstamus\ningredientus"
+ShoppingListService --> MealPlanningController : "Updated ShoppingList"
+
+MealPlanningController --> Database : "UPDATE shopping_lists\nSET items = ?\nWHERE meal_plan_id = ?"
+Database --> MealPlanningController : "Success"
+
+MealPlanningController --> MealPlanningPage : "MealPlanUpdatedState"
+MealPlanningPage --> User : "Rodyti sėkmės pranešimą:\n✅ Planas atnaujintas!"
+
+' ============================================
+' SCENARIJUS C: Ištrinti planą
+' ============================================
+MealPlanningPage --> MealPlanningController : "DeleteMealPlanEvent"
+
+MealPlanningController --> Database : "Gauti esamą planą\nSELECT * FROM meal_plans\nWHERE id = ?"
+Database --> MealPlanningController : "MealPlan data"
+
+MealPlanningController --> MealPlanningPage : "Rodyti patvirtinimo dialogą:\nAr tikrai norite ištrinti\nmitybos planą?"
+MealPlanningPage --> User : "Patvirtinimo dialogas"
+
+alt Vartotojas patvirtino
+  MealPlanningController --> Database : "Ištrinti planą (soft delete)\nUPDATE meal_plans\nSET deleted_at = CURRENT_TIMESTAMP\nWHERE id = ?"
+  Database --> MealPlanningController : "Success"
+  
+  MealPlanningController --> Database : "Ištrinti susijusį shopping list\n(jei yra)\nUPDATE shopping_lists\nSET deleted_at = CURRENT_TIMESTAMP\nWHERE meal_plan_id = ?"
+  Database --> MealPlanningController : "Success"
+  
+  MealPlanningController --> MealPlanningPage : "MealPlanDeletedState"
+  MealPlanningPage --> User : "Rodyti sėkmės pranešimą:\n✅ Planas ištrintas!\nRodyti tuščią būseną\narba 'Generuoti naują planą' mygtuką"
+else Vartotojas atšaukia
+  MealPlanningController --> MealPlanningPage : "MealPlanDeleteCancelledState"
+  MealPlanningPage --> User : "Atšaukti ištrynimą"
+end
+
+' ============================================
+' RYŠIAI: Entity -> Entity (jei reikia)
+' ============================================
+' MealPlan gali turėti ryšį su Inventory per ingredientus
+MealPlanEntity --> InventoryEntity : "naudojami ingredientai"
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

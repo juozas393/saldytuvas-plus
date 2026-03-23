@@ -1,0 +1,347 @@
+@startuml Manage Products Robustness
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Robustumo diagrama - Valdyti produktus (pagal Activity Diagram)
+
+' ============================================
+' AKTORIUS (Vartotojas)
+' ============================================
+actor "Šeimos narys" as User
+
+' ============================================
+' BOUNDARY OBJEKTAI (UI Ribos)
+' ============================================
+
+package "UI Boundaries (Langai)" {
+  rectangle "Inventoriaus langas\n(Produktų peržiūra)" <<boundary>> as InventoryPage
+  rectangle "Produkto pridėjimo langas\n(Forma)" <<boundary>> as AddProductPage
+  rectangle "Produkto kortelės langas\n(Detalės/Redagavimas)" <<boundary>> as ProductDetailPage
+  rectangle "Redagavimo langas\n(Produkto duomenų forma)" <<boundary>> as EditProductPage
+  rectangle "Patvirtinimo langas\n(Ištrynimo patvirtinimas)" <<boundary>> as ConfirmDialog
+  rectangle "Leidimo suteikimo langas\n(Kameros/Galerijos leidimas)" <<boundary>> as PermissionDialog
+}
+
+package "Išorinės sistemos" {
+  rectangle "Supabase API\n(DB prieiga)" <<boundary>> as SupabaseBoundary
+  rectangle "Open Food Facts API\n(Produktų duomenys)" <<boundary>> as OpenFoodFactsBoundary
+  rectangle "Mobile Scanner\n(Barcode skaitymas)" <<boundary>> as BarcodeScannerBoundary
+  rectangle "Image Picker\n(Kamera / Galerija)" <<boundary>> as ImagePickerBoundary
+  rectangle "ML Kit OCR\n(Tekstų atpažinimas)" <<boundary>> as MLKitOCRBoundary
+  rectangle "Gemini API\n(AI analizė)" <<boundary>> as GeminiBoundary
+}
+
+' ============================================
+' CONTROLLER OBJEKTAI (Verslo logika)
+' ============================================
+
+package "BLoC Controllers" {
+  rectangle "InventoryBloc\n(Inventoriaus valdymas)" <<control>> as InventoryBloc
+  rectangle "BudgetBloc\n(Biudžeto valdymas)" <<control>> as BudgetBloc
+}
+
+package "Use Cases" {
+  rectangle "AddProductUseCase\n(Produkto pridėjimas)" <<control>> as AddProductUseCase
+  rectangle "UpdateProductUseCase\n(Produkto atnaujinimas)" <<control>> as UpdateProductUseCase
+  rectangle "DeleteProductUseCase\n(Produkto ištrynimas)" <<control>> as DeleteProductUseCase
+}
+
+package "Services" {
+  rectangle "BarcodeScannerService\n(Barcode skaitymas)" <<control>> as BarcodeScannerService
+  rectangle "OpenFoodFactsService\n(Produkto duomenys)" <<control>> as OpenFoodFactsService
+  rectangle "ImageProcessingService\n(Nuotraukų apdorojimas)" <<control>> as ImageProcessingService
+  rectangle "OCRService\n(OCR apdorojimas)" <<control>> as OCRService
+  rectangle "ReceiptParsingService\n(Čekių parsavimas)" <<control>> as ReceiptParsingService
+  rectangle "ProductMatchingService\n(Dublikatų patikra)" <<control>> as ProductMatchingService
+}
+
+' ============================================
+' ENTITY OBJEKTAI (Duomenų modeliai)
+' ============================================
+
+package "Domain Models" {
+  rectangle "Product\n(Produkto modelis)" <<entity>> as ProductEntity
+  rectangle "InventoryItem\n(Inventoriaus elementas)" <<entity>> as InventoryItemEntity
+  rectangle "Receipt\n(Čekio modelis)" <<entity>> as ReceiptEntity
+  rectangle "Budget\n(Biudžeto modelis)" <<entity>> as BudgetEntity
+}
+
+' ============================================
+' RYŠIAI - Use Case 1: Peržiūrėti produktus
+' ============================================
+
+User --> InventoryPage : paspaudžia "Peržiūrėti produktus"
+InventoryPage --> InventoryBloc : įvykis: LoadProductsEvent
+InventoryBloc --> SupabaseBoundary : užklausa: gauti produktus
+SupabaseBoundary --> InventoryBloc : atsakas: produktų sąrašas
+InventoryBloc --> InventoryPage : būsena: ProductsLoadedState
+InventoryPage --> User : rodo produktų sąrašą
+
+' ============================================
+' RYŠIAI - Use Case 2: Pridėti produktą rankiniu būdu
+' ============================================
+
+User --> InventoryPage : paspaudžia "Pridėti produktą"
+InventoryPage --> AddProductPage : naviguoja į pridėjimo langą
+User --> AddProductPage : "Suvesti produkto informaciją" (forma)
+AddProductPage --> InventoryBloc : įvykis: ValidateProductDataEvent
+InventoryBloc --> AddProductUseCase : validuoja duomenis
+AddProductUseCase --> InventoryBloc : validacija: [duomenys teisingi] arba [duomenys neteisingi]
+InventoryBloc --> AddProductPage : būsena: ValidationResultState
+
+note right of AddProductPage
+  Jei [duomenys teisingi]:
+  Toliau seka pridėjimas
+  Jei [duomenys neteisingi]:
+  Rodo klaidos pranešimą
+end note
+
+AddProductPage --> InventoryBloc : įvykis: AddProductEvent (validūs duomenys)
+InventoryBloc --> AddProductUseCase : kviečia use case
+AddProductUseCase --> ProductEntity : sukuria Product objektą
+AddProductUseCase --> InventoryItemEntity : sukuria InventoryItem
+AddProductUseCase --> SupabaseBoundary : užklausa: įrašyti produktą
+SupabaseBoundary --> AddProductUseCase : atsakas: sukurtas produktas
+AddProductUseCase --> InventoryBloc : grąžina ProductEntity
+InventoryBloc --> AddProductPage : būsena: ProductAddedState
+AddProductPage --> User : rodo sėkmės pranešimą
+
+' ============================================
+' RYŠIAI - Use Case 3: Pridėti produktą pagal barcode
+' ============================================
+
+User --> AddProductPage : paspaudžia "Nuskaityti barkodą"
+AddProductPage --> BarcodeScannerBoundary : atidaro barcode scanner'į
+BarcodeScannerBoundary --> BarcodeScannerService : nuskaitytas barcode
+BarcodeScannerService --> BarcodeScannerBoundary : gauna barcode (pvz., 5901234123457)
+BarcodeScannerBoundary --> AddProductPage : grąžina barcode
+AddProductPage --> InventoryBloc : įvykis: ScanBarcodeEvent(barcode)
+InventoryBloc --> OpenFoodFactsService : užklausa: "Ieškoti produkto pagal barkodą"
+OpenFoodFactsService --> OpenFoodFactsBoundary : HTTP užklausa: GET /api/v0/product/{barcode}
+OpenFoodFactsBoundary --> OpenFoodFactsService : atsakas: produkto duomenys (JSON)
+OpenFoodFactsService --> InventoryBloc : grąžina ProductEntity arba null
+
+note right of InventoryBloc
+  [rasta produkto informacija]:
+  Rodo produktą formoje
+  [nerastas produktas]:
+  Rodo klaidos pranešimą
+end note
+
+InventoryBloc --> AddProductPage : būsena: ProductScannedState (su automatiškai užpildyta forma) arba ErrorState
+AddProductPage --> User : rodo produkto informaciją arba klaidos pranešimą
+
+' ============================================
+' RYŠIAI - Use Case 4: Pridėti produktą iš čekio nuotraukos (OCR + Gemini)
+' ============================================
+
+User --> AddProductPage : paspaudžia mygtuką "Atidaryti kamerą" arba "Pasirinkti nuotrauką"
+AddProductPage --> AddProductPage : patikrina leidimą naudotis kamera/galerija
+AddProductPage --> PermissionDialog : [leidimas nesuteiktas]: atidaro leidimo suteikimo langą
+PermissionDialog --> User : rodo leidimo prašymą
+User --> PermissionDialog : paspaudžia "Suteikti leidimą"
+PermissionDialog --> PermissionDialog : suteikia leidimą naudotis kamera
+PermissionDialog --> AddProductPage : grąžina leidimo statusą
+AddProductPage --> ImagePickerBoundary : atidaro kamerą/galeriją (leidimas suteiktas)
+ImagePickerBoundary --> User : rodo kamerą arba galeriją
+User --> ImagePickerBoundary : nufotografuoja čekį arba pasirenka nuotrauką
+ImagePickerBoundary --> AddProductPage : grąžina nuotrauką (XFile)
+
+AddProductPage --> InventoryBloc : įvykis: ProcessReceiptImageEvent(imageFile)
+InventoryBloc --> ImageProcessingService : apdoroja nuotrauką
+ImageProcessingService --> ImageProcessingService : "Nuskaityti įkeltą failą į atmintį"
+ImageProcessingService --> ImageProcessingService : "Apskaičiuoti nuotraukos matmenis ir dydį"
+ImageProcessingService --> ImageProcessingService : patikrina DPI: [per mažas DPI] arba [geras DPI]
+ImageProcessingService --> ImageProcessingService : "Išplėsti nuotrauką" (jei reikia)
+ImageProcessingService --> ImageProcessingService : "Pašalinti RGB spalvas" (grayscale)
+ImageProcessingService --> ImageProcessingService : "Pagerinti kontrastą" (adaptive threshold)
+ImageProcessingService --> ImageProcessingService : "Pašalinti triukšmą" (median filter)
+ImageProcessingService --> ImageProcessingService : "Išsaugoti apdorotą vaizdą"
+ImageProcessingService --> InventoryBloc : grąžina apdorotą vaizdą
+
+InventoryBloc --> OCRService : "Paleisti OCR procesą"
+OCRService --> MLKitOCRBoundary : "Skenuoti nuotrauką"
+MLKitOCRBoundary --> OCRService : "Gauti OCR rezultatą" (tekstas)
+OCRService --> OCRService : "Normalizuoti tekstą" (whitespace, valiuta, ir t.t.)
+OCRService --> InventoryBloc : grąžina normalizuotą tekstą arba null
+
+note right of InventoryBloc
+  [OCR pavyko]:
+  Toliau seka Gemini analizė
+  [OCR nepavyko]:
+  Rodo klaidos pranešimą
+end note
+
+InventoryBloc --> ReceiptParsingService : "Analizuoti nuotrauką su Gemini"
+ReceiptParsingService --> GeminiBoundary : "Skenuoti nuotrauką" + OCR tekstas
+GeminiBoundary --> ReceiptParsingService : "Analizuoti OCR tekstą" ir "Pateikti rezultatus JSON formatu"
+ReceiptParsingService --> ReceiptParsingService : validuoja JSON struktūrą
+ReceiptParsingService --> InventoryBloc : grąžina produktų sąrašą su confidence reikšmėmis
+
+note right of InventoryBloc
+  [produktai gauti JSON validus]:
+  Toliau seka Open Food Facts paieška
+  [nepavyko gauti produktų]:
+  Rodo klaidos pranešimą
+end note
+
+InventoryBloc --> OpenFoodFactsService : "Kurti Open Food Facts užklausą" (pagal pavadinimus)
+OpenFoodFactsService --> OpenFoodFactsBoundary : "Ieškoti produkto pagal pavadinimą"
+OpenFoodFactsBoundary --> OpenFoodFactsService : "Gauti produkto duomenis"
+OpenFoodFactsService --> InventoryBloc : grąžina ProductEntity arba null
+
+note right of InventoryBloc
+  [duomenys rasti]:
+  Atnaujina produkto duomenis
+  [else]:
+  Naudoja Gemini duomenis
+end note
+
+InventoryBloc --> AddProductPage : būsena: ProductsFromReceiptState (produktų sąrašas su confidence)
+AddProductPage --> User : "Pateikti gautą produktų sąrašą su patikimumo reikšmėmis"
+
+' ============================================
+' RYŠIAI - Use Case 5: Redaguoti produktą
+' ============================================
+
+User --> InventoryPage : paspaudžia ant produkto kortelės
+InventoryPage --> ProductDetailPage : naviguoja į produkto detalės langą
+User --> ProductDetailPage : paspaudžia "Redaguoti"
+ProductDetailPage --> EditProductPage : naviguoja į redagavimo langą
+EditProductPage --> InventoryBloc : įvykis: LoadProductDataEvent(productId)
+InventoryBloc --> SupabaseBoundary : užklausa: gauti produkto duomenis
+SupabaseBoundary --> InventoryBloc : atsakas: ProductEntity
+
+note right of InventoryBloc
+  [netrūksta produkto duomenų]:
+  Toliau seka redagavimas
+  [trūksta produkto duomenų] arba [informacija nerasta]:
+  Rodo klaidos pranešimą
+end note
+
+InventoryBloc --> EditProductPage : būsena: ProductDataLoadedState (su esamais duomenimis)
+User --> EditProductPage : redaguoja duomenis
+EditProductPage --> InventoryBloc : įvykis: UpdateProductEvent(productId, updatedData)
+InventoryBloc --> UpdateProductUseCase : kviečia use case
+UpdateProductUseCase --> ProductEntity : atnaujina Product objektą
+UpdateProductUseCase --> InventoryItemEntity : atnaujina InventoryItem
+UpdateProductUseCase --> ProductMatchingService : "Patikrinti galimus produkto dublikatus"
+ProductMatchingService --> SupabaseBoundary : užklausa: gauti panašių produktų sąrašą
+SupabaseBoundary --> ProductMatchingService : atsakas: produktų sąrašas
+ProductMatchingService --> ProductMatchingService : patikrina dublikatus (RapidFuzz)
+
+note right of ProductMatchingService
+  [rastas dublikatas]:
+  Sujungia produktus
+  [nebuvo dublikatų]:
+  Sukuria naują produktą
+end note
+
+ProductMatchingService --> UpdateProductUseCase : grąžina merged Product arba naują Product
+UpdateProductUseCase --> SupabaseBoundary : užklausa: atnaujinti produktą arba sukurti naują
+SupabaseBoundary --> UpdateProductUseCase : atsakas: atnaujintas/sukurtas produktas
+UpdateProductUseCase --> InventoryBloc : grąžina ProductEntity
+InventoryBloc --> BudgetBloc : "Atnaujinti inventoriaus duomenis" ir "Atnaujinti biudžetą"
+BudgetBloc --> SupabaseBoundary : užklausa: atnaujinti biudžetą
+SupabaseBoundary --> BudgetBloc : atsakas: atnaujintas biudžetas
+InventoryBloc --> EditProductPage : būsena: ProductUpdatedState
+EditProductPage --> User : rodo sėkmės pranešimą
+
+' ============================================
+' RYŠIAI - Use Case 6: Ištrinti produktą
+' ============================================
+
+User --> ProductDetailPage : paspaudžia "Ištrinti produktą"
+ProductDetailPage --> ConfirmDialog : rodo "Patvirtinimo langą"
+User --> ConfirmDialog : paspaudžia patvirtinimo mygtuką: [nori patvirtinti produkto ištrynimą]
+
+note right of ConfirmDialog
+  [nori patvirtinti]:
+  Toliau seka ištrynimas
+  [else]:
+  Atšaukia
+end note
+
+ConfirmDialog --> InventoryBloc : įvykis: DeleteProductEvent(productId)
+InventoryBloc --> DeleteProductUseCase : kviečia use case
+DeleteProductUseCase --> SupabaseBoundary : užklausa: ištrinti produktą
+SupabaseBoundary --> DeleteProductUseCase : atsakas: sėkmė
+DeleteProductUseCase --> InventoryBloc : grąžina success
+InventoryBloc --> InventoryPage : "Ištrinti produktą iš gauto sąrašo"
+InventoryBloc --> InventoryPage : būsena: ProductDeletedState
+InventoryPage --> User : rodo "Pateikti sėkmingo ištrynimo pranešimą"
+
+' ============================================
+' RYŠIAI - Use Cases → Entities
+' ============================================
+
+AddProductUseCase --> ProductEntity : sukuria Product objektą
+UpdateProductUseCase --> ProductEntity : atnaujina Product objektą
+DeleteProductUseCase --> ProductEntity : ištrina Product objektą
+
+AddProductUseCase --> InventoryItemEntity : sukuria InventoryItem
+UpdateProductUseCase --> InventoryItemEntity : atnaujina InventoryItem
+DeleteProductUseCase --> InventoryItemEntity : ištrina InventoryItem
+
+ReceiptParsingService --> ReceiptEntity : sukuria Receipt objektą
+OpenFoodFactsService --> ProductEntity : sukuria Product iš API atsakymo
+
+' ============================================
+' RYŠIAI - BLoC → Use Cases
+' ============================================
+
+InventoryBloc --> AddProductUseCase : prideda produktą
+InventoryBloc --> UpdateProductUseCase : atnaujina produktą
+InventoryBloc --> DeleteProductUseCase : ištrina produktą
+
+' ============================================
+' RYŠIAI - BLoC → Services
+' ============================================
+
+InventoryBloc --> BarcodeScannerService : skenuoja barcode
+InventoryBloc --> OpenFoodFactsService : gauna produkto duomenis
+InventoryBloc --> ImageProcessingService : apdoroja nuotrauką
+InventoryBloc --> OCRService : paleidžia OCR
+InventoryBloc --> ReceiptParsingService : analizuoja čekį
+InventoryBloc --> ProductMatchingService : patikrina dublikatus
+
+' ============================================
+' RYŠIAI - Services → External Boundaries
+' ============================================
+
+BarcodeScannerService --> BarcodeScannerBoundary : skaito barcode
+OpenFoodFactsService --> OpenFoodFactsBoundary : HTTP užklausa: produkto duomenys
+ImageProcessingService --> ImagePickerBoundary : gauna nuotrauką
+OCRService --> MLKitOCRBoundary : OCR skenavimas
+ReceiptParsingService --> GeminiBoundary : AI analizė
+ProductMatchingService --> SupabaseBoundary : gauti produktų sąrašą dublikatams
+
+' ============================================
+' RYŠIAI - Use Cases → Supabase
+' ============================================
+
+AddProductUseCase --> SupabaseBoundary : INSERT produktą į DB
+UpdateProductUseCase --> SupabaseBoundary : UPDATE produktą DB
+DeleteProductUseCase --> SupabaseBoundary : DELETE produktą iš DB
+
+' ============================================
+' RYŠIAI - BLoC → BudgetBloc
+' ============================================
+
+InventoryBloc --> BudgetBloc : atnaujina biudžetą po produkto redagavimo
+BudgetBloc --> BudgetEntity : atnaujina Budget objektą
+
+' ============================================
+' RYŠIAI - Pages → BLoC
+' ============================================
+
+InventoryPage --> InventoryBloc : veiksmai (LoadProducts, AddProduct, UpdateProduct, DeleteProduct)
+AddProductPage --> InventoryBloc : veiksmai (ScanBarcode, AddProduct, ProcessReceiptImage)
+ProductDetailPage --> InventoryBloc : veiksmai (UpdateProduct, DeleteProduct)
+EditProductPage --> InventoryBloc : veiksmai (UpdateProduct)
+
+@enduml

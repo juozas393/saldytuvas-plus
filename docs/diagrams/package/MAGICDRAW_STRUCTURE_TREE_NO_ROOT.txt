@@ -1,0 +1,239 @@
+═══════════════════════════════════════════════════════════════════════════
+SALDYTVAS PLUS - PACKAGE DIAGRAM STRUKTŪRA (BE ROOT PACKAGE)
+═══════════════════════════════════════════════════════════════════════════
+
+SVARBU: Visi paketai yra TOP-LEVEL (nėra root package "SaldytuvasPlus")
+
+
+📦 1. MemberSubsystem (Top-Level Package - Subsystem)
+│
+├── 📦 Views (Sub-Package)
+│   ├── 🎨 HomePage (Class, <<screen>>)
+│   ├── 🎨 LoginPage (Class, <<screen>>)
+│   ├── 🎨 InventoryPage (Class, <<screen>>)
+│   ├── 🎨 ProductDetailsPage (Class, <<screen>>)
+│   ├── 🎨 AddProductPage (Class, <<screen>>)
+│   ├── 🎨 ReceiptAndBudgetPage (Class, <<screen>>)
+│   ├── 🎨 DealsPage (Class, <<screen>>)
+│   ├── 🎨 StoreDealsPage (Class, <<screen>>)
+│   ├── 🎨 ShoppingListScreen (Class, <<screen>>)
+│   ├── 🎨 MealPlanningPage (Class, <<screen>>)
+│   ├── 🎨 DishDetailsPage (Class, <<screen>>)
+│   ├── 🎨 AddRecipePage (Class, <<screen>>)
+│   ├── 🎨 NutritionPage (Class, <<screen>>)
+│   ├── 🎨 ProfilePage (Class, <<screen>>)
+│   └── 🎨 SettingsPage (Class, <<screen>>)
+│
+└── 📦 Controllers (Sub-Package)
+    ├── 🎛️ RouterController (Class, <<control>>)
+    ├── 🎛️ DashboardController (Class, <<control>>)
+    ├── 🎛️ InventoryController (Class, <<control>>)
+    ├── 🎛️ ProductController (Class, <<control>>)
+    ├── 🎛️ ProductScanController (Class, <<control>>)
+    ├── 🎛️ ReceiptAndBudgetController (Class, <<control>>)
+    ├── 🎛️ MealPlanningController (Class, <<control>>)
+    ├── 🎛️ RecipeController (Class, <<control>>)
+    ├── 🎛️ HealthEvaluationController (Class, <<control>>)
+    ├── 🎛️ ShoppingListController (Class, <<control>>)
+    ├── 🎛️ DealsController (Class, <<control>>)
+    ├── 🎛️ AuthController (Class, <<control>>)
+    ├── 🎛️ ProfileController (Class, <<control>>)
+    └── 🎛️ SettingsController (Class, <<control>>)
+
+
+📦 2. AdminSubsystem (Top-Level Package - Subsystem)
+│
+└── 📦 Controllers (Sub-Package)
+    ├── 🎛️ FamilyMembersController (Class, <<control>>)
+    ├── 🎛️ MealPlanController (Class, <<control>>)
+    ├── 🎛️ BudgetController (Class, <<control>>)
+    ├── 🎛️ InventoryAccessController (Class, <<control>>)
+    ├── 🎛️ DealsUpdateController (Class, <<control>>)
+    ├── 🎛️ FoodRulesController (Class, <<control>>)
+    ├── 🎛️ FoodSubstituteController (Class, <<control>>)
+    ├── 🎛️ BudgetAlertController (Class, <<control>>)
+    └── 🎛️ ExpirationAlertController (Class, <<control>>)
+
+
+📦 3. DomainModel (Top-Level Package)
+│
+├── 📦 Entities (Sub-Package)
+│   ├── 📦 Administrator (Class, <<entity>>)
+│   ├── 📦 Budget (Class, <<entity>>)
+│   ├── 📦 Category (Class, <<entity>>)
+│   ├── 📦 Deal (Class, <<entity>>)
+│   ├── 📦 Dish (Class, <<entity>>)
+│   ├── 📦 Environment (Class, <<entity>>)
+│   ├── 📦 FoodRule (Class, <<entity>>)
+│   ├── 📦 Inventory (Class, <<entity>>)
+│   ├── 📦 Member (Class, <<entity>>)
+│   ├── 📦 Notification (Class, <<entity>>)
+│   ├── 📦 NutritionPlan (Class, <<entity>>)
+│   ├── 📦 Product (Class, <<entity>>)
+│   ├── 📦 PromoFlyer (Class, <<entity>>)
+│   ├── 📦 Receipt (Class, <<entity>>)
+│   ├── 📦 ReceiptLine (Class, <<entity>>)
+│   ├── 📦 Recipe (Class, <<entity>>)
+│   ├── 📦 ShoppingList (Class, <<entity>>)
+│   ├── 📦 Store (Class, <<entity>>)
+│   └── 📦 User (Class, <<entity>>)
+│
+└── 📦 Enumerations (Sub-Package)
+    ├── 🔢 DishType (Enumeration)
+    ├── 🔢 FoodRuleStatus (Enumeration)
+    ├── 🔢 Gender (Enumeration)
+    ├── 🔢 MealPlanStatus (Enumeration)
+    ├── 🔢 NotificationLevel (Enumeration)
+    ├── 🔢 StorePriority (Enumeration)
+    └── 🔢 UserRole (Enumeration)
+
+
+📦 4. DataAccess (Top-Level Package)
+│
+├── 📦 Repositories (Sub-Package)
+│   ├── 📄 IInventoryRepository (Interface)
+│   ├── 📄 IReceiptRepository (Interface)
+│   ├── 📄 IBudgetRepository (Interface)
+│   ├── 📄 IMealPlanRepository (Interface)
+│   ├── 📄 IShoppingListRepository (Interface)
+│   ├── 📄 IRecipeRepository (Interface)
+│   ├── 📄 IUserRepository (Interface)
+│   ├── 📄 IDealsRepository (Interface)
+│   ├── 📄 ICategoryRepository (Interface)
+│   └── 📄 INotificationRepository (Interface)
+│
+└── 📦 SupabaseGateway (Sub-Package)
+    └── 🔌 SupabaseGateway (Class, <<boundary>>)
+
+
+📦 5. ExternalServices (Top-Level Package)
+│
+├── 🔌 CameraGalleryBoundary (Class, <<boundary>>)
+├── 🔌 GeminiServiceBoundary (Class, <<boundary>>)
+├── 🔌 OCRServiceBoundary (Class, <<boundary>>)
+├── 🔌 OpenFoodFactsServiceBoundary (Class, <<boundary>>)
+├── 🔌 SpoonacularServiceBoundary (Class, <<boundary>>)
+└── 🔌 MobileScannerBoundary (Class, <<boundary>>)
+
+
+📦 6. Services (Top-Level Package)
+│
+├── ⚙️ MealPlanningService (Class)
+├── ⚙️ ShoppingListService (Class)
+├── ⚙️ ReceiptParsingService (Class)
+├── ⚙️ ImageProcessingService (Class)
+├── ⚙️ OCRService (Class)
+├── ⚙️ BarcodeScannerService (Class)
+├── ⚙️ NutritionService (Class)
+├── ⚙️ HealthScoreService (Class)
+├── ⚙️ FoodRecognitionService (Class)
+├── ⚙️ DealsScraperService (Class)
+├── ⚙️ GeminiService (Class)
+├── ⚙️ SpoonacularService (Class)
+├── ⚙️ OpenFoodFactsService (Class)
+├── ⚙️ NotificationService (Class)
+└── ⚙️ ProductMatchingService (Class)
+
+
+📦 7. Core (Top-Level Package)
+│
+├── 📦 Config (Sub-Package)
+│   └── ⚙️ AppConfig (Class)
+│
+├── 📦 Errors (Sub-Package)
+│   ├── ⚠️ Exceptions (Class)
+│   └── ⚠️ Failures (Class)
+│
+├── 📦 Network (Sub-Package)
+│   ├── 🌐 SupabaseClient (Class)
+│   └── 🌐 HttpClient (Class)
+│
+├── 📦 Storage (Sub-Package)
+│   └── 💾 LocalStorage (Class)
+│
+├── 📦 Theme (Sub-Package)
+│   └── 🎨 AppTheme (Class)
+│
+└── 📦 Utils (Sub-Package)
+    └── 🔧 Helpers (Class)
+
+
+📦 8. Actors (Top-Level Package)
+│
+├── 👤 GoogleAuthentication (Actor, <<actor>>)
+├── 👤 FamilyAdministrator (Actor, <<actor>>)
+├── 👤 FamilyMember (Actor, <<actor>>)
+├── 👤 Guest (Actor, <<actor>>)
+├── 🤖 GeminiAPI (Actor, <<actor>>)
+├── 🤖 MLKitOCR (Actor, <<actor>>)
+├── 🏪 StoreWebsite (Actor, <<actor>>)
+└── 🤖 SpoonacularAPI (Actor, <<actor>>)
+
+
+═══════════════════════════════════════════════════════════════════════════
+DEPENDENCIES (Priklausomybės)
+═══════════════════════════════════════════════════════════════════════════
+
+1. MemberSubsystem.Views ──(uses)──> MemberSubsystem.Controllers
+2. MemberSubsystem.Controllers ──(uses)──> Services
+3. MemberSubsystem.Controllers ──(uses entities)──> DomainModel.Entities
+4. MemberSubsystem.Controllers ──(calls)──> ExternalServices
+5. AdminSubsystem.Controllers ──(uses)──> Services
+6. AdminSubsystem.Controllers ──(uses entities)──> DomainModel.Entities
+7. Services ──(uses entities)──> DomainModel.Entities
+8. Services ──(calls)──> ExternalServices
+9. Services ──(uses)──> DataAccess.Repositories
+10. DataAccess.Repositories ──(uses)──> DataAccess.SupabaseGateway
+11. DataAccess.SupabaseGateway ──(uses)──> Core.Network.SupabaseClient
+12. ExternalServices ──(uses)──> Core.Network.HttpClient
+13. DomainModel.Entities ──(uses)──> DomainModel.Enumerations
+14. MemberSubsystem ──(uses)──> Core
+15. AdminSubsystem ──(uses)──> Core
+16. Services ──(uses)──> Core
+17. Actors.FamilyMember ──(interacts)──> MemberSubsystem.Views
+18. Actors.FamilyAdministrator ──(interacts)──> AdminSubsystem.Controllers
+19. Actors.Guest ──(limited access)──> MemberSubsystem.Views
+20. Actors.GoogleAuthentication ──(OAuth)──> Core.Network.HttpClient
+21. Actors.GeminiAPI ──(external API)──> ExternalServices.GeminiServiceBoundary
+22. Actors.MLKitOCR ──(external API)──> ExternalServices.OCRServiceBoundary
+23. Actors.StoreWebsite ──(provides data)──> Services.DealsScraperService
+24. Actors.SpoonacularAPI ──(external API)──> ExternalServices.SpoonacularServiceBoundary
+25. MemberSubsystem.Views.NutritionPage ──(navigates to)──> MemberSubsystem.Views.MealPlanningPage
+
+
+═══════════════════════════════════════════════════════════════════════════
+LEGEND (Legenda)
+═══════════════════════════════════════════════════════════════════════════
+
+📦 = Package
+🎨 = Class (View/Screen)
+🎛️ = Class (Controller/BLoC)
+📦 = Class (Entity)
+🔢 = Enumeration
+📄 = Interface
+🔌 = Class (Boundary)
+⚙️ = Class (Service)
+👤 = Actor (User)
+🤖 = Actor (External System)
+⚠️ = Class (Error)
+🌐 = Class (Network)
+💾 = Class (Storage)
+🎨 = Class (Theme)
+🔧 = Class (Utility)
+
+<<screen>> = Stereotype for Views
+<<control>> = Stereotype for Controllers
+<<entity>> = Stereotype for Entities
+<<boundary>> = Stereotype for Boundaries
+<<actor>> = Stereotype for Actors
+
+
+═══════════════════════════════════════════════════════════════════════════
+PASTABOS
+═══════════════════════════════════════════════════════════════════════════
+
+1. VISI PAKETAI YRA TOP-LEVEL (nėra root package "SaldytuvasPlus")
+2. Visi paketai matomi viename lygyje
+3. Struktūra rodo loginę architektūrą (priklausomybės)
+4. Fiziniame Flutter kode struktūra bus feature-based (lib/features/*/)
+

@@ -1,0 +1,146 @@
+@startuml Controllers and Entities Mapping
+!theme plain
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+skinparam defaultTextAlignment center
+
+title Controller'iai ir Entity - Kaip jie susiję?
+
+' ============================================
+' CONTROLLERS (Feature-based)
+' ============================================
+
+package "BLoC Controllers (Pagal Feature'us)" {
+  rectangle "InventoryBloc\n(Inventoriaus valdymas)" <<control>> as InventoryBloc
+  rectangle "MealPlannerBloc\n(Mitybos planavimas)" <<control>> as MealPlannerBloc
+  rectangle "ReceiptBloc\n(Čekių valdymas)" <<control>> as ReceiptBloc
+  rectangle "BudgetBloc\n(Biudžeto valdymas)" <<control>> as BudgetBloc
+  rectangle "ShoppingListBloc\n(Pirkinių sąrašas)" <<control>> as ShoppingListBloc
+  rectangle "PromotionsBloc\n(Akcijų valdymas)" <<control>> as PromotionsBloc
+  rectangle "RecipeBloc\n(Receptų valdymas)" <<control>> as RecipeBloc
+  rectangle "AuthBloc\n(Autentifikacija)" <<control>> as AuthBloc
+  rectangle "ProfileBloc\n(Profilio valdymas)" <<control>> as ProfileBloc
+  rectangle "DashboardBloc\n(Santraukos)" <<control>> as DashboardBloc
+  rectangle "ScanBloc\n(Skanavimas)" <<control>> as ScanBloc
+  rectangle "SettingsBloc\n(Nustatymai)" <<control>> as SettingsBloc
+}
+
+' ============================================
+' ENTITIES (Domain Models)
+' ============================================
+
+package "Domain Entities" {
+  rectangle "Product\n(Produktas)" <<entity>> as Product
+  rectangle "InventoryItem\n(Inventoriaus elementas)" <<entity>> as InventoryItem
+  rectangle "Meal\n(Valgis)" <<entity>> as Meal
+  rectangle "MealPlan\n(Mitybos planas)" <<entity>> as MealPlan
+  rectangle "Recipe\n(Receptas)" <<entity>> as Recipe
+  rectangle "Receipt\n(Čekis)" <<entity>> as Receipt
+  rectangle "ReceiptItem\n(Čekio produktas)" <<entity>> as ReceiptItem
+  rectangle "Budget\n(Biudžetas)" <<entity>> as Budget
+  rectangle "ShoppingListItem\n(Pirkinių sąrašo elementas)" <<entity>> as ShoppingListItem
+  rectangle "ShoppingList\n(Pirkinių sąrašas)" <<entity>> as ShoppingList
+  rectangle "Deal\n(Akcija)" <<entity>> as Deal
+  rectangle "User\n(Vartotojas)" <<entity>> as User
+  rectangle "Settings\n(Nustatymai)" <<entity>> as Settings
+}
+
+' ============================================
+' RYŠIAI - Controller → Entity
+' ============================================
+
+' Inventory Feature
+InventoryBloc --> Product : valdo CRUD
+InventoryBloc --> InventoryItem : valdo CRUD
+
+' Meal Planning Feature
+MealPlannerBloc --> Meal : valdo CRUD
+MealPlannerBloc --> MealPlan : valdo CRUD
+
+' Recipes Feature
+RecipeBloc --> Recipe : valdo CRUD
+
+' Receipts Feature
+ReceiptBloc --> Receipt : valdo CRUD
+ReceiptBloc --> ReceiptItem : valdo CRUD
+
+' Budget Feature
+BudgetBloc --> Budget : valdo CRUD
+
+' Shopping List Feature
+ShoppingListBloc --> ShoppingList : valdo CRUD
+ShoppingListBloc --> ShoppingListItem : valdo CRUD
+
+' Promotions Feature
+PromotionsBloc --> Deal : valdo CRUD
+
+' Auth Feature
+AuthBloc --> User : valdo autentifikaciją
+
+' Profile Feature
+ProfileBloc --> User : valdo profilio duomenis
+
+' Dashboard Feature (read-only)
+DashboardBloc --> Product : skaityti (santraukoms)
+DashboardBloc --> MealPlan : skaityti (santraukoms)
+DashboardBloc --> Receipt : skaityti (santraukoms)
+
+' Settings Feature
+SettingsBloc --> Settings : valdo lokalius nustatymus
+
+' Scan Feature (neturi tiesioginių entity)
+note right of ScanBloc
+  ScanBloc neturi tiesioginių entity
+  Jis tik koordinuoja skanavimo procesą
+  Rezultatas perduodamas į InventoryBloc
+end note
+
+' ============================================
+' PASTABOS
+' ============================================
+
+note bottom
+  **PAGRINDINIS PRINCIPAS:**
+  
+  ✅ 1 Feature = 1 BLoC Controller
+  ✅ 1 Controller valdo 1-3 susijusius entity
+  ✅ Controller'iai organizuojami pagal FUNKCIONALUMĄ, ne pagal entity
+  
+  **Pavyzdžiai:**
+  - InventoryBloc valdo Product + InventoryItem (2 entity)
+  - MealPlannerBloc valdo Meal + MealPlan (2 entity)
+  - ReceiptBloc valdo Receipt + ReceiptItem (2 entity)
+  
+  ❌ NENAUDOKITE: 1 Entity = 1 Controller (per daug controller'ių)
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

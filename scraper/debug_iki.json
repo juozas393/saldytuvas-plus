@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "totalProducts": 372,
+  "duration": 151553,
+  "errors": [],
+  "sampleProducts": [
+    {
+      "store": "iki",
+      "name": "ROKIŠKIO NAMINĖ varškė",
+      "originalPrice": 6.09,
+      "discountPrice": 3.49609,
+      "discountPercent": 50,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-14T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://iki.lt/wp-content/uploads/2026/03/06/20260309-001.jpg",
+      "unit": "1 kg",
+      "pricePerUnit": null,
+      "description": "1 kg, 9 % rieb.",
+      "storeProductId": null,
+      "productUrl": "https://lastmile.lt/chain/banner/ADAsvyweVgN23QC753re/ADAsvyweVgN23QC753re/CvKfTzV4TN5U8BTMF1Hl?utm_source=iki&utm_medium=Supplier&utm_campaign=Savaitines_akcijos",
+      "sourceSection": "Savaitės akcijos",
+      "scrapedAt": "2026-03-09T17:53:09.019Z"
+    },
+    {
+      "store": "iki",
+      "name": "Šviežiai kiaulienai",
+      "originalPrice": null,
+      "discountPrice": 0,
+      "discountPercent": 30,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-14T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://iki.lt/wp-content/uploads/2026/03/06/20260309-002.jpg",
+      "unit": null,
+      "pricePerUnit": null,
+      "description": "Įvairių rūšių, (nuolaida netaikoma smulkintai mėsa)",
+      "storeProductId": null,
+      "productUrl": "https://lastmile.lt/chain/banner/keyDmklPpOHVEY9jUaRn/keyDmklPpOHVEY9jUaRn/CvKfTzV4TN5U8BTMF1Hl?utm_source=iki&utm_medium=Supplier&utm_campaign=Savaitines_akcijos",
+      "sourceSection": "Savaitės akcijos",
+      "scrapedAt": "2026-03-09T17:53:09.019Z"
+    },
+    {
+      "store": "iki",
+      "name": "KĖDAINIŲ konservuotoms daržovėms, padažams, kečupui",
+      "originalPrice": null,
+      "discountPrice": 0,
+      "discountPercent": 40,
+      "validFrom": "2026-03-08T22:00:00.000Z",
+      "validTo": "2026-03-14T22:00:00.000Z",
+      "category": null,
+      "imageUrl": "https://iki.lt/wp-content/uploads/2026/03/06/20260309-003.jpg",
+      "unit": null,
+      "pricePerUnit": null,
+      "description": "Įvairių rūšių. Ir IKI EXPRESS",
+      "storeProductId": null,
+      "productUrl": "https://lastmile.lt/chain/banner/30r8EIG6jKxA70NWf7Nh/30r8EIG6jKxA70NWf7Nh/CvKfTzV4TN5U8BTMF1Hl?utm_source=iki&utm_medium=Supplier&utm_campaign=Savaitines_akcijos",
+      "sourceSection": "Savaitės akcijos",
+      "scrapedAt": "2026-03-09T17:53:09.019Z"
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+@startuml Delete Meal Plan - Sequence Diagram
+
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Ištrinti mitybos planą - Sequence Diagram
+
+actor "Šeimos\nnarys" as User
+participant "MealPlanningPage\n<<screen>>" as Page
+participant "MealPlanningController\n<<control>>" as Controller
+participant "MealPlanEntity\n<<entity>>" as MealPlan
+participant "SupabaseClient\n(Core.Network)" as Supabase
+database "Supabase DB" as Database
+
+== SCENARIJUS: Vartotojas ištrina mitybos planą ==
+
+User -> Page: Paspaudžia "Ištrinti planą"
+activate Page
+
+Page -> Controller: DeleteMealPlanEvent(planId)
+activate Controller
+
+Controller -> Supabase: from('meal_plans')\n  .select()\n  .eq('id', planId)\n  .eq('user_id', userId)\n  .single()
+activate Supabase
+Supabase -> Database: SELECT * FROM meal_plans\nWHERE id = ? AND user_id = ?
+activate Database
+Database --> Supabase: MealPlan data (JSON)
+deactivate Database
+Supabase --> Controller: Map<String, dynamic>
+deactivate Supabase
+
+Controller -> Controller: mapToMealPlanEntity(data)
+Controller -> MealPlan: create(data)
+activate MealPlan
+MealPlan --> Controller: MealPlanEntity
+deactivate MealPlan
+
+Controller --> Page: ShowDeleteConfirmationState(mealPlan)
+deactivate Controller
+
+Page -> User: Rodo patvirtinimo dialogą:\n"Ar tikrai norite ištrinti\nmitybos planą?"
+deactivate Page
+
+== Patvirtinimas ==
+
+alt Vartotojas patvirtina
+    User -> Page: Paspaudžia "Taip, ištrinti"
+    activate Page
+    Page -> Controller: ConfirmDeleteMealPlanEvent(planId)
+    activate Controller
+    
+    == Soft delete meal_plans ==
+    
+    Controller -> Supabase: from('meal_plans')\n  .update({\n    deleted_at: CURRENT_TIMESTAMP\n  })\n  .eq('id', planId)
+    activate Supabase
+    Supabase -> Database: UPDATE meal_plans\nSET deleted_at = CURRENT_TIMESTAMP\nWHERE id = ?
+    activate Database
+    Database --> Supabase: Success
+    deactivate Database
+    Supabase --> Controller: Updated data
+    deactivate Supabase
+    
+    == Soft delete shopping_lists ==
+    
+    Controller -> Supabase: from('shopping_lists')\n  .select()\n  .eq('meal_plan_id', planId)\n  .is_('deleted_at', null)
+    activate Supabase
+    Supabase -> Database: SELECT * FROM shopping_lists\nWHERE meal_plan_id = ?\nAND deleted_at IS NULL
+    activate Database
+    
+    alt Shopping list rastas
+        Database --> Supabase: ShoppingList data (JSON)
+        deactivate Database
+        Supabase --> Controller: Map<String, dynamic>
+        deactivate Supabase
+        
+        Controller -> Supabase: from('shopping_lists')\n  .update({\n    deleted_at: CURRENT_TIMESTAMP\n  })\n  .eq('meal_plan_id', planId)
+        activate Supabase
+        Supabase -> Database: UPDATE shopping_lists\nSET deleted_at = CURRENT_TIMESTAMP\nWHERE meal_plan_id = ?
+        activate Database
+        Database --> Supabase: Success
+        deactivate Database
+        Supabase --> Controller: Success
+        deactivate Supabase
+    else Shopping list nerastas
+        Database --> Supabase: null (no results)
+        deactivate Database
+        Supabase --> Controller: null
+        deactivate Supabase
+        note right of Controller: Shopping list nerastas\n(nebūtina, bet patikrinama)
+    endif
+    
+    Controller --> Page: MealPlanDeletedState(\n  message: "Planas ištrintas!"\n)
+    deactivate Controller
+    
+    Page -> User: Rodo sėkmės pranešimą:\n✅ "Planas ištrintas!"
+    deactivate Page
+    
+    Page -> Controller: LoadMealPlanEvent(date: today)
+    activate Controller
+    Controller -> Supabase: from('meal_plans')\n  .select()\n  .eq('user_id', userId)\n  .gte('plan_start_date', today)\n  .lte('plan_end_date', today)\n  .is_('deleted_at', null)
+    activate Supabase
+    Supabase -> Database: SELECT * FROM meal_plans\nWHERE user_id = ?\nAND plan_start_date <= CURRENT_DATE\nAND plan_end_date >= CURRENT_DATE\nAND deleted_at IS NULL
+    activate Database
+    Database --> Supabase: null (no results)
+    deactivate Database
+    Supabase --> Controller: empty list
+    deactivate Supabase
+    Controller --> Page: MealPlanNotFoundState()
+    deactivate Controller
+    
+    Page -> User: Rodo tuščią būseną:\n"Planas nerastas"\n+ Mygtukas "Generuoti planą"
+    deactivate Page
+    
+else Vartotojas atšaukia
+    User -> Page: Paspaudžia "Atšaukti"
+    activate Page
+    Page -> Controller: CancelDeleteMealPlanEvent()
+    activate Controller
+    Controller --> Page: DeleteCancelledState()
+    deactivate Controller
+    Page -> User: Grįžta į planą (nieko neištrinta)
+    deactivate Page
+endif
+
+note over User, Database
+  **SVARBU:**
+  - Naudojamas SOFT DELETE (deleted_at)
+  - Ištrinamas ir susijęs shopping_list
+  - Po ištrynimo rodoma tuščia būsena su mygtuku "Generuoti planą"
+end note
+
+@enduml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
