@@ -1,13 +1,20 @@
 /**
- * Akcijos.lt API Adapter (v2)
+ * Akcijos.lt API Adapter (v3)
  *
  * Uses api.akcijos.lt/search/searchProducts to fetch promotions
- * from all Lithuanian stores. Improvements over v1:
- * - 196 search keywords (was 81) for better coverage
- * - Parallel requests with concurrency limit (was sequential)
- * - 100ms delay (was 300ms) - 3x faster
- * - Regex compiled once at module level (was per-product)
- * - Fixed silent store fallback bug
+ * from all Lithuanian stores.
+ *
+ * v3 improvements over v2:
+ * - ~500 hyper-specific keywords (was 196 broad) for maximum coverage
+ * - API returns max 10 items per store per keyword, so narrow terms
+ *   that yield <10 results per store capture ALL matching products
+ * - Removed wasteful broad terms (akcija, nuolaida, 1 kg, etc.)
+ * - Added 47 brand-specific searches (SVALIA, PERGALE, VICIŪNAI, etc.)
+ * - Added specific meat cuts, cheese types, pasta shapes, spices
+ * - Parallel requests with concurrency limit (5 concurrent)
+ * - 100ms delay between requests
+ * - Pre-compiled regex and non-food terms at module level
+ * - Fixed silent store fallback bug (v2)
  */
 
 import { Product, StoreName } from '../../core/types.js';
@@ -34,77 +41,241 @@ const STORE_MAP: Record<string, StoreName> = {
 // Only include these stores
 const TARGET_STORES = new Set(Object.keys(STORE_MAP));
 
-// Lithuanian food search terms - 196 keywords for maximum coverage
+// Lithuanian food search terms - v3: ~500 hyper-specific keywords
+// Strategy: narrow terms where each store has <10 results = we get ALL products
+// Broad terms (akcija, nuolaida, 1 kg) removed - they hit the 10-item cap and miss 90%+ products
 const FOOD_KEYWORDS = [
-    // Pieno produktai (23)
+    // === PIENO PRODUKTAI ===
+    // Baziniai (8)
     'pienas', 'sviestas', 'grietinė', 'grietinėlė', 'jogurtas', 'kefyras',
-    'varškė', 'sūris', 'kiaušiniai', 'mozzarella', 'mascarpone', 'parmezanas',
-    'feta', 'gouda', 'ementalis', 'čederis', 'kamemberts', 'bri',
-    'sūrelis', 'skuta', 'išrūgos', 'pienelis', 'kremas',
-    // Mėsa ir mėsos gaminiai (23)
+    'varškė', 'kiaušiniai',
+    // Specifiniai sūriai (21)
+    'sūris', 'mozzarella', 'mascarpone', 'parmezanas', 'feta', 'gouda',
+    'ementalis', 'čederis', 'kamemberts', 'bri', 'sūrelis',
+    'tilsit', 'edamas', 'rikotas', 'halumi', 'burrata', 'provolone',
+    'lydytas sūris', 'rūkytas sūris', 'kreminis sūris', 'varškės sūris',
+    // Specifiniai pieno gaminiai (16)
+    'skuta', 'išrūgos', 'pienelis', 'kremas', 'smetona',
+    'graikiškas jogurtas', 'geriamasis jogurtas',
+    'probiotinis', 'acidofilas',
+    'pasukos', 'varškės masė', 'varškės desertas', 'glazūruotas sūrelis',
+    'pieno kokteilis', 'grietinėlės sūris',
+    'sūdytas sviestas',
+
+    // === MĖSA IR MĖSOS GAMINIAI ===
+    // Baziniai (10)
     'kiauliena', 'jautiena', 'vištiena', 'kalakutiena', 'mėsa', 'faršas',
-    'dešra', 'kumpis', 'šoninė', 'dešrelės', 'skilandis', 'kumpio',
-    'karbonadą', 'šonkauliukai', 'sprandinė', 'nugarinė', 'filė',
-    'kepenys', 'pjausnys', 'kotletas', 'kebabas',
-    'rūkytas', 'vytintas', 'virtas',
-    // Žuvis ir jūros gėrybės (11)
+    'dešra', 'kumpis', 'šoninė', 'dešrelės',
+    // Specifiniai pjūviai (18)
+    'skilandis', 'šonkauliukai', 'sprandinė', 'nugarinė', 'filė',
+    'kepenys', 'kotletas', 'kebabas',
+    'vištienos krūtinėlė', 'vištienos blauzdelės', 'vištienos sparneliai',
+    'kiaulienos sprandinė', 'kiaulienos kumpis',
+    'jautienos antrekotė', 'jautienos nugarinė',
+    'kalakutienos filė', 'kalakutienos krūtinėlė',
+    'paukštiena',
+    // Dešros ir gaminiai (16)
+    'saliamis', 'chorizo', 'prosciutto', 'mortadela', 'servelatas',
+    'sardelės', 'kupetinės dešrelės', 'kaimiška dešra',
+    'kumpio riekelės', 'skilandis pjaustytas',
+    'rūkytas kumpis', 'virtas kumpis',
+    'mėsainiai', 'lašiniai',
+    'rūkytas', 'vytintas',
+    // Retesnė mėsa (7)
+    'antiena', 'ėriena', 'triušiena', 'veršiena',
+    'kepenėlės', 'širdelės', 'liežuvis',
+
+    // === ŽUVIS IR JŪROS GĖRYBĖS ===
+    // Baziniai (11)
     'žuvis', 'lašiša', 'silkė', 'krevetės', 'menkė', 'tunų',
     'upėtakis', 'skumbrė', 'pangasius', 'karpis', 'lydeka',
-    // Vaisiai ir uogos (20)
+    // Specifiniai (20)
+    'šprotai', 'sardines', 'ešerys', 'ungurys',
+    'kalmarai', 'midijos',
+    'lašišos filė', 'menkės filė', 'heko', 'tilapija',
+    'stinta', 'ikrai', 'krabų lazdelės', 'surimi',
+    'žuvies piršteliai', 'žuvies kepsnys',
+    'rūkyta lašiša', 'rūkyta skumbrė',
+    'silkė aliejuje', 'marinuota silkė',
+
+    // === VAISIAI IR UOGOS ===
     'obuoliai', 'bananai', 'braškės', 'vynuogės', 'apelsinai',
     'citrina', 'avokadas', 'arbūzas', 'melionas', 'persikai',
     'nektarinai', 'mangai', 'ananasai', 'kiviai', 'kriaušės',
     'slyvos', 'vyšnios', 'mėlynės', 'aviečiai', 'spanguolės',
-    // Daržovės (22)
+
+    // === DARŽOVĖS ===
     'pomidorai', 'agurkai', 'bulvės', 'morkos', 'svogūnai',
     'paprikos', 'salotos', 'kopūstai', 'brokoliai', 'žiediniai kopūstai',
     'cukinija', 'baklažanai', 'ridikai', 'špinatai', 'česnakų',
     'burokėliai', 'petražolės', 'krapai', 'rukola', 'kukurūzai',
-    'grybai', 'pievagrybiai',
-    // Duona ir kepiniai (9)
+    'grybai', 'pievagrybiai', 'moliūgas',
+
+    // === DUONA IR KEPINIAI ===
+    // Baziniai (9)
     'duona', 'batonas', 'bandelės', 'pyragėliai', 'croissant',
     'lavašas', 'pita', 'tortilija', 'sumuštinis',
-    // Bakalėja (20)
+    // Specifiniai (16)
+    'ruginė duona', 'kvietinė duona', 'juoda duona',
+    'duona su sėklomis', 'grūdėta duona',
+    'spurgos', 'žagarėliai', 'krekeriai',
+    'focaccia', 'ciabatta', 'briošas',
+    'sluoksniuota tešla', 'pyragėlis su varške',
+    'kibinai', 'čeburekai', 'šakotis',
+
+    // === BAKALĖJA ===
+    // Baziniai (15)
     'miltai', 'cukrus', 'ryžiai', 'makaronai', 'aliejus', 'actas',
-    'druska', 'pipirai', 'padažas', 'kečupas', 'majonezas',
-    'konservai', 'dribsniai', 'muesli', 'košė', 'kruopos',
-    'grikiai', 'avižos', 'sojos', 'pomidorų',
-    // Šaldytas maistas (9)
-    'šaldytas', 'šaldyti', 'ledai', 'pica', 'koldūnai', 'cepelinai',
-    'blynai', 'šaldyta daržovių', 'šaldyta žuvis',
-    // Saldumynai ir užkandžiai (13)
+    'druska', 'padažas', 'kečupas', 'majonezas',
+    'konservai', 'dribsniai', 'muesli', 'kruopos', 'grikiai',
+    // Specifiniai makaronai (10)
+    'spagečiai', 'penne', 'fusilli', 'tagliatelle', 'lasanja',
+    'farfalle', 'rigatoni', 'gnocchi',
+    'vermišeliai', 'pilno grūdo makaronai',
+    // Specifiniai ryžiai (6)
+    'basmati', 'jasmine', 'ilgagrūdžiai',
+    'rudieji ryžiai', 'laukiniai ryžiai',
+    'kuskusas',
+    // Specifiniai miltai ir kruopos (8)
+    'rugių miltai', 'kvietiniai miltai', 'pilno grūdo miltai',
+    'kukurūzų miltai', 'ryžių miltai',
+    'manų kruopos', 'perlinės kruopos', 'miežinės kruopos',
+    // Specifiniai aliejai (8)
+    'alyvuogių aliejus', 'saulėgrąžų aliejus', 'rapsų aliejus',
+    'kokosų aliejus', 'sezamo aliejus', 'linų aliejus',
+    'extra virgin', 'šalto spaudimo',
+    // Grūdiniai (6)
+    'avižos', 'avižiniai dribsniai', 'kukurūzų dribsniai',
+    'sėlenos', 'bulguras', 'grūdų mišinys',
+
+    // === PADAŽAI IR PRIESKONIAI ===
+    // Baziniai (6)
+    'pipirai', 'prieskoniai', 'garstyčios', 'marinatas',
+    'pomidorų pasta', 'pomidorų padažas',
+    // Specifiniai padažai (12)
+    'sojos padažas', 'sriracha', 'tabasco',
+    'čili padažas', 'barbekiu padažas',
+    'teriyaki', 'pesto', 'bolognese',
+    'tataro padažas', 'česnakinis padažas',
+    'balzamiko', 'ajvaro',
+    // Specifiniai prieskoniai (16)
+    'kurkuma', 'kalendra', 'kmynai', 'cinamonas', 'vanilė',
+    'rožmarinas', 'bazilikas', 'oreganas', 'tymiano', 'majoranas',
+    'čili pipirai', 'juodieji pipirai',
+    'muskatas', 'karis',
+    'česnako milteliai', 'prieskonių mišinys',
+    // Actas (3)
+    'obuolių actas', 'vyno actas', 'ryžių actas',
+
+    // === KONSERVAI - SPECIFINIAI ===
+    'konservuoti žirneliai', 'konservuoti kukurūzai', 'konservuoti pomidorai',
+    'konservuotos pupelės', 'konservuotas tunas',
+    'alyvuogės žalios', 'alyvuogės juodos', 'alyvuogės',
+    'marinuoti agurkai', 'marinuoti pomidorai', 'marinuoti grybai',
+    'kapotai pomidorai', 'pomidorų tyrė',
+    'šprotai aliejuje', 'paštetas',
+
+    // === ŠALDYTAS MAISTAS ===
+    'ledai', 'pica', 'koldūnai', 'cepelinai', 'blynai',
+    'šaldytos daržovės', 'šaldytos uogos', 'šaldytos krevetės',
+    'šaldyti kotletai', 'šaldytos bulvytės', 'bulvių lazdelės',
+    'kukuliai', 'virtiniai',
+    'šaldyta pica', 'mini pica',
+    'šaldyti žirneliai', 'šaldyti kukurūzai',
+
+    // === SALDUMYNAI ===
+    // Baziniai (10)
     'šokoladas', 'saldainiai', 'sausainiai', 'pyragas', 'tortas',
-    'traškučiai', 'riešutai', 'desertas', 'marmeladas',
-    'batonėlis', 'vaflis', 'meduolis', 'biskvitas',
-    // Augaliniai / vegetariški (4)
-    'tofu', 'hummusas', 'augalinis', 'veganas',
-    // Kiti maisto produktai (9)
-    'medus', 'uogienė', 'margarinas', 'grūdai', 'trapučiai',
-    'majonezo', 'garstyčios', 'citrinų', 'alyvuogės',
-    // v2: Papildomi raktažodžiai platesnei aprėpčiai (33)
-    'pupelės', 'lęšiai', 'avinžirniai', 'žirniai', 'sėklos',
-    'sezamas', 'moliūgas', 'imbierai', 'kmynai', 'cinamonas',
-    'vanilė', 'rožmarinas', 'bazilikas', 'mėtų', 'lauro',
-    'grietinėlės', 'smetona', 'kakavos', 'milteliai', 'želatina',
-    'krakmolas', 'soda', 'kepimo', 'mielės', 'raugalas',
-    'skonio', 'prieskoniai', 'marinatas', 'pastilas', 'chalva',
-    'cukatos', 'razinos', 'džiovinti',
-    // v2: Populiarūs brendai - platesnis sąrašas (20)
+    'traškučiai', 'desertas', 'marmeladas', 'vaflis', 'meduolis',
+    // Specifiniai šokoladai (4)
+    'juodasis šokoladas', 'pieniškas šokoladas', 'baltas šokoladas',
+    'šokoladiniai saldainiai',
+    // Specifiniai saldumynai (10)
+    'biskvitas', 'napoleonas', 'tinginys',
+    'zefyrai', 'lukumas', 'pastilas', 'chalva',
+    'triufeliai', 'marcipanas',
+    'cukatos',
+
+    // === UŽKANDŽIAI ===
+    'riešutai', 'batonėlis', 'trapučiai',
+    'kukurūzų traškučiai', 'ryžių traškučiai',
+    'nachos', 'spraginti kukurūzai',
+
+    // === RIEŠUTAI IR DŽIOVINTI VAISIAI ===
+    'migdolai', 'graikiniai riešutai', 'lazdynų riešutai',
+    'žemės riešutai', 'anakardžiai', 'pistacijos',
+    'kedro riešutai', 'riešutų mišinys',
+    'džiovintos slyvos', 'džiovinti abrikosai', 'džiovinti fikai',
+    'džiovintos datulės', 'razinos',
+    'saulėgrąžos', 'moliūgų sėklos', 'linų sėmenys', 'chia',
+    'sezamas', 'sėklos',
+
+    // === PUSRYČIAI ===
+    'granola', 'avižinė košė', 'košė',
+    'džemas', 'uogienė', 'medus',
+    'šokoladinis kremas', 'nutella',
+    'žemės riešutų sviestas',
+
+    // === PARUOŠTAS MAISTAS IR SRIUBOS ===
+    'sriuba', 'bulijonas', 'tirštoji sriuba', 'trinta sriuba',
+    'vištienos sultinys', 'jautienos sultinys', 'daržovių sultinys',
+    'sultinio kubeliai',
+    'mišrainė', 'lazanija',
+    'plovas', 'suši',
+
+    // === AUGALINIAI / VEGETARIŠKI ===
+    'tofu', 'hummusas', 'augalinis', 'veganas', 'falafel',
+
+    // === DIETINIAI / EKO ===
+    'ekologiškas', 'be gliuteno', 'be laktozės', 'be cukraus',
+
+    // === SVIESTAS IR MARGARINAS ===
+    'margarinas', 'RAMA', 'FLORA',
+
+    // === ANKŠTINIAI IR GRŪDAI ===
+    'pupelės', 'lęšiai', 'avinžirniai', 'žirniai',
+    'sojos',
+
+    // === DESERTAI ===
+    'pudingas', 'želė', 'tiramisu',
+
+    // === KEPIMO REIKMENYS ===
+    'mielės', 'krakmolas', 'želatina', 'kepimo',
+    'kakavos', 'milteliai', 'raugalas',
+
+    // === PARUOŠIMO BŪDAI (siauros paieškos) ===
+    'marinuotas', 'rauginti', 'sūdyta',
+    'šviežia', 'natūralus', 'fermentinis',
+
+    // === BRENDAI - PIENO (18) ===
     'ROKIŠKIO', 'DVARO', 'VILKYŠKIŲ', 'ŽEMAITIJOS', 'PILOS',
-    'KARUMS', 'AMRITA', 'MLEKOVITA', 'PRESIDENT',
-    'BIOVELA', 'KREKENAVOS', 'BÁCON', 'SNEKUTIS',
-    'MAŽOJI LIETUVA', 'TIKRAS', 'DANONE', 'DR. OETKER',
-    'KNORR', 'BARILLA', 'SANTA MARIA',
-    // v2: Bendriniai maisto terminai (8)
-    'maistas', 'produktai', 'maisto', 'akcija', 'nuolaida',
-    'pigiausias', 'pasiūlymas', 'naujovė',
-    // Paruošimo būdai (11)
-    'marinuotas', 'rauginti', 'sūdyta', 'gruzdintas',
-    'keptas', 'troškinta', 'šviežia', 'natūralus',
-    'naminis', 'lietuviškas', 'fermentinis',
-    // v2: Matavimo vienetai ir kiekiai (8)
-    '1 kg', '2 kg', '500 g', '250 g', '200 g', '100 g',
-    '1 l', 'vnt',
+    'KARUMS', 'AMRITA', 'MLEKOVITA', 'PRESIDENT', 'DANONE',
+    'SVALIA', 'VILVI', 'PIENO ŽVAIGŽDĖS', 'BALTASIS',
+    'RAMBYNAS', 'VALIO', 'HOCHLAND', 'ACTIVIA',
+
+    // === BRENDAI - MĖSA (8) ===
+    'BIOVELA', 'KREKENAVOS', 'SNEKUTIS',
+    'JUDEX', 'SAMSONAS', 'UTENOS MĖSA', 'ARVI',
+    'MAŽOJI LIETUVA',
+
+    // === BRENDAI - ŽUVIS IR ŠALDYTI (3) ===
+    'VIČIUNAI', 'NORVELITA', 'MANTINGA',
+
+    // === BRENDAI - SALDUMYNAI (10) ===
+    'PERGALĖ', 'RŪTA', 'LAIMA',
+    'KINDER', 'FERRERO', 'MILKA',
+    'RITTER SPORT', 'LINDT', 'HARIBO',
+    'DR. OETKER',
+
+    // === BRENDAI - MAISTAS (14) ===
+    'KNORR', 'BARILLA', 'SANTA MARIA', 'FAZER',
+    'FELIX', 'HEINZ', 'HELLMANNS',
+    'BONDUELLE', 'HORTEX', 'IGLO',
+    'MAGGI', 'PODRAVKA', 'ROLTON',
+    'TIKRAS',
+
+    // === BRENDAI - UŽKANDŽIAI (3) ===
+    'ESTRELLA', 'PRINGLES', 'CHEETOS',
 ];
 
 // Category exclusion patterns (case-insensitive partial match)
@@ -196,7 +367,7 @@ export class AkcijosLtAdapter {
     private allProducts: Map<string, Product> = new Map();
 
     async run(): Promise<{ products: Product[]; byStore: Record<string, Product[]> }> {
-        console.log(`[Akcijos.lt] Starting API scrape with ${FOOD_KEYWORDS.length} keywords (5 parallel)...`);
+        console.log(`[Akcijos.lt v3] Starting API scrape with ${FOOD_KEYWORDS.length} keywords (5 parallel)...`);
         const startTime = Date.now();
 
         let completed = 0;
@@ -206,11 +377,11 @@ export class AkcijosLtAdapter {
                 try {
                     await this.searchKeyword(keyword);
                 } catch (err) {
-                    console.error(`[Akcijos.lt] Error searching "${keyword}":`, err);
+                    console.error(`[Akcijos.lt v3] Error searching "${keyword}":`, err);
                 }
                 completed++;
                 if (completed % 10 === 0) {
-                    console.log(`[Akcijos.lt] Progress: ${completed}/${FOOD_KEYWORDS.length} keywords, ${this.allProducts.size} unique products`);
+                    console.log(`[Akcijos.lt v3] Progress: ${completed}/${FOOD_KEYWORDS.length} keywords, ${this.allProducts.size} unique products`);
                 }
                 // Small delay to avoid hammering the API
                 await new Promise(r => setTimeout(r, 100));
@@ -228,8 +399,8 @@ export class AkcijosLtAdapter {
             byStore[p.store].push(p);
         }
 
-        console.log(`[Akcijos.lt] Done in ${(duration / 1000).toFixed(1)}s`);
-        console.log(`[Akcijos.lt] Total unique products: ${products.length}`);
+        console.log(`[Akcijos.lt v3] Done in ${(duration / 1000).toFixed(1)}s`);
+        console.log(`[Akcijos.lt v3] Total unique products: ${products.length}`);
         for (const [store, storeProducts] of Object.entries(byStore)) {
             console.log(`  ${store}: ${storeProducts.length} products`);
         }
@@ -241,7 +412,7 @@ export class AkcijosLtAdapter {
         const url = `https://api.akcijos.lt/search/searchProducts?term=${encodeURIComponent(keyword)}`;
         const resp = await fetch(url);
         if (!resp.ok) {
-            console.warn(`[Akcijos.lt] HTTP ${resp.status} for "${keyword}"`);
+            console.warn(`[Akcijos.lt v3] HTTP ${resp.status} for "${keyword}"`);
             return;
         }
 
