@@ -1,5 +1,6 @@
 # GitHub Actions Workflow for Automated Promotions Scraping
-# Runs daily to fetch the latest food promotions from Lithuanian stores
+# Scrapes Lithuanian supermarket promotions (Lidl, IKI, Rimi, Norfa, Maxima)
+# and uploads results directly to Supabase DB for real-time mobile app access.
 
 name: Scrape Store Promotions
 
@@ -7,95 +8,102 @@ on:
   # Run daily at 6:00 AM UTC (8:00 AM Lithuania time)
   schedule:
     - cron: '0 6 * * *'
-  
+
   # Allow manual trigger
   workflow_dispatch:
-    inputs:
-      force_update:
-        description: 'Force update mobile app data'
-        required: false
-        default: 'true'
-        type: boolean
-      stores:
-        description: 'Stores to scrape (comma-separated: lidl,iki,rimi,norfa or "all")'
-        required: false
-        default: 'all'
-        type: string
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: scraper/package-lock.json
-      
-      - name: Install Playwright browsers
+
+      - name: Install scraper dependencies
         run: |
           cd scraper
           npm ci
-          npx playwright install chromium
-      
-      - name: Run Lidl Scraper
+
+      - name: Run scraper
         run: |
           cd scraper
-          npm run scrape:lidl
-          echo "Lidl products: $(cat lidl_products.json | jq length)"
-      
-      - name: Run IKI Scraper
+          npm run scrape:all
+          echo "--- Scrape summary ---"
+          TOTAL=0
+          for f in lidl_products.json iki_products.json rimi_products.json norfa_products.json maxima_products.json; do
+            if [ -f "$f" ]; then
+              COUNT=$(jq length "$f")
+              echo "$f: $COUNT products"
+              TOTAL=$((TOTAL + COUNT))
+            else
+              echo "$f: MISSING"
+            fi
+          done
+          echo "Total: $TOTAL products"
+
+      - name: Upload promotions to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          cd scraper
-          npm run scrape:iki
-          echo "IKI products: $(cat iki_products.json | jq length)"
-      
-      - name: Run Rimi Scraper
-        continue-on-error: true
-        run: |
-          cd scraper
-          npm run scrape:rimi
-          echo "Rimi products: $(cat rimi_products.json | jq length)"
-      
-      - name: Run Norfa Scraper
-        continue-on-error: true
-        run: |
-          cd scraper
-          npm run scrape:norfa
-          echo "Norfa products: $(cat norfa_products.json | jq length)"
-      
-      - name: Copy data to mobile app
-        run: |
-          mkdir -p mobile/src/data
-          cp scraper/lidl_products.json mobile/src/data/lidl_products.json
-          [ -f scraper/iki_products.json ] && cp scraper/iki_products.json mobile/src/data/iki_products.json || echo "No IKI data"
-          [ -f scraper/rimi_products.json ] && cp scraper/rimi_products.json mobile/src/data/rimi_products.json || echo "No Rimi data"
-          [ -f scraper/norfa_products.json ] && cp scraper/norfa_products.json mobile/src/data/norfa_products.json || echo "No Norfa data"
-          echo "Data copied to mobile app"
-      
-      - name: Commit and push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # Add all product JSON files
-          git add mobile/src/data/*_products.json scraper/*_products.json || true
-          
-          # Check if there are changes
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "🛒 Auto-update store promotions [$(date +'%Y-%m-%d')]"
-            git push
-          fi
-      
+          echo "Clearing old promotions..."
+          curl -s -o /dev/null -w "DELETE: HTTP %{http_code}\n" \
+            -X DELETE "${SUPABASE_URL}/rest/v1/promotions?id=not.is.null" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"
+
+          UPLOADED=0
+          for store in lidl iki rimi norfa maxima; do
+            FILE="scraper/${store}_products.json"
+            if [ -f "$FILE" ]; then
+              COUNT=$(jq length "$FILE")
+              if [ "$COUNT" -gt 0 ]; then
+                echo "Uploading $store: $COUNT products..."
+                # Transform JSON keys from camelCase to snake_case for Supabase
+                jq '[.[] | {
+                  store,
+                  name,
+                  original_price: .originalPrice,
+                  discount_price: .discountPrice,
+                  discount_percent: .discountPercent,
+                  valid_from: .validFrom,
+                  valid_to: .validTo,
+                  category,
+                  image_url: .imageUrl,
+                  unit,
+                  price_per_unit: .pricePerUnit,
+                  description,
+                  store_product_id: .storeProductId,
+                  product_url: .productUrl,
+                  source_section: .sourceSection,
+                  deal_type: .dealType,
+                  scraped_at: .scrapedAt
+                }]' "$FILE" | \
+                curl -s -o /dev/null -w "  $store: HTTP %{http_code}\n" \
+                  -X POST "${SUPABASE_URL}/rest/v1/promotions" \
+                  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+                  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+                  -H "Content-Type: application/json" \
+                  -H "Prefer: return=minimal" \
+                  -d @-
+                UPLOADED=$((UPLOADED + COUNT))
+              else
+                echo "Skipping $store (0 products)"
+              fi
+            else
+              echo "Skipping $store (no file)"
+            fi
+          done
+          echo "Total uploaded to Supabase: $UPLOADED products"
+
       - name: Upload scrape results as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -105,4 +113,6 @@ jobs:
             scraper/iki_products.json
             scraper/rimi_products.json
             scraper/norfa_products.json
+            scraper/maxima_products.json
           retention-days: 7
+          if-no-files-found: warn
