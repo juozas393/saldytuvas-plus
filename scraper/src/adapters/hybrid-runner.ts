@@ -104,23 +104,43 @@ async function fetchIki(): Promise<HybridProduct[]> {
     console.log('[IKI Direct] Fetching from REST API...');
 
     const res = await fetchWithRetry('https://iki.lt/wp-json/iki-app/v1/promos');
-    const data: any[] = await res.json();
+    const text = await res.text();
+
+    // Validate JSON response (API might return HTML on block/error)
+    let data: any[];
+    try {
+        data = JSON.parse(text);
+    } catch {
+        console.error(`[IKI Direct] API returned non-JSON (${text.slice(0, 200)}...)`);
+        return [];
+    }
+
+    if (!Array.isArray(data)) {
+        console.error(`[IKI Direct] API returned non-array: ${typeof data}`);
+        return [];
+    }
 
     console.log(`[IKI Direct] API returned ${data.length} promos`);
 
     const products: HybridProduct[] = [];
 
     for (const item of data) {
-        const name = (item.title || '').trim();
-        if (!name || name.length < 2) continue;
+        try {
+            const name = (item.title || '').trim();
+            if (!name || name.length < 2) continue;
 
-        const discountPrice = parsePrice(item.meta_price);
-        if (!discountPrice) continue;
+            // meta_price can be "" (empty), "0.19", or missing
+            // Items without price but with discount % (like "-50%") are still valid
+            const discountPrice = parsePrice(item.meta_price);
+            const originalPrice = parsePrice(item.meta_price_old);
+            const metaDiscount = item.meta_discount
+                ? parseInt(String(item.meta_discount).replace(/[^0-9]/g, ''), 10) || null
+                : null;
 
-        const originalPrice = parsePrice(item.meta_price_old);
-        const discountPercent = item.meta_discount
-            ? parseInt(String(item.meta_discount).replace(/[^0-9]/g, ''), 10) || null
-            : calcDiscount(originalPrice, discountPrice);
+            // Must have either a price or a discount percentage
+            if (!discountPrice && !metaDiscount) continue;
+
+            const discountPercent = metaDiscount || calcDiscount(originalPrice, discountPrice || 0);
 
         // Parse dates
         let validFrom: string | null = null;
@@ -138,27 +158,36 @@ async function fetchIki(): Promise<HybridProduct[]> {
         // Deal type from meta_sales_note
         const dealType = item.meta_sales_note || null;
 
-        if (!isFoodProduct(name)) continue;
+            // Filter non-food categories (cosmetics, household, etc.)
+            const cats = Array.isArray(item.categories) ? item.categories : [];
+            const isNonFoodCategory = cats.some((c: string) =>
+                /kosmetik|higien|valymo|buitin|gyvūn|namų ūkio|household/i.test(c));
+            if (isNonFoodCategory) continue;
 
-        products.push({
-            store: 'iki',
-            name,
-            originalPrice,
-            discountPrice,
-            discountPercent,
-            validFrom,
-            validTo,
-            category: typeof category === 'string' ? category : null,
-            imageUrl,
-            unit: null,
-            pricePerUnit: null,
-            description: item.description ? String(item.description).replace(/<[^>]*>/g, '').trim().slice(0, 200) : null,
-            storeProductId: item.promo_id ? String(item.promo_id) : null,
-            productUrl: item.shop_url || null,
-            sourceSection: 'iki.lt/promos',
-            dealType,
-            scrapedAt: NOW_ISO,
-        });
+            if (!isFoodProduct(name)) continue;
+
+            products.push({
+                store: 'iki',
+                name,
+                originalPrice,
+                discountPrice: discountPrice || 0,
+                discountPercent,
+                validFrom,
+                validTo,
+                category: typeof category === 'string' ? category : null,
+                imageUrl,
+                unit: null,
+                pricePerUnit: null,
+                description: item.description ? String(item.description).replace(/<[^>]*>/g, '').trim().slice(0, 200) : null,
+                storeProductId: item.promo_id ? String(item.promo_id) : null,
+                productUrl: item.shop_url || null,
+                sourceSection: 'iki.lt/promos',
+                dealType,
+                scrapedAt: NOW_ISO,
+            });
+        } catch {
+            // Skip malformed items
+        }
     }
 
     console.log(`[IKI Direct] ${products.length} food products after filtering`);
@@ -190,43 +219,51 @@ async function fetchNorfa(): Promise<HybridProduct[]> {
             const html = await res.text();
             const $ = cheerio.load(html);
 
-            // Norfa uses c-product--compact cards
-            const cards = $('[class*="c-product"]');
-            console.log(`[Norfa Direct]   Found ${cards.length} product elements`);
+            // Norfa uses c-product--compact cards as top-level containers
+            // IMPORTANT: [class*="c-product"] matches children too (c-product__name etc.)
+            // Use the specific card class to avoid duplicates
+            const cards = $('.c-product--compact, .c-product--full, .c-product--list');
+            // Fallback to broader selector if specific classes not found
+            const productCards = cards.length > 0 ? cards : $('[class*="c-product"]').filter((_, el) => {
+                const cls = $(el).attr('class') || '';
+                return /c-product--(compact|full|list|card)/.test(cls);
+            });
+            console.log(`[Norfa Direct]   Found ${productCards.length} product cards`);
 
-            cards.each((_, el) => {
+            productCards.each((_, el) => {
                 const $el = $(el);
-                const name = $el.find('[class*="c-product__name"], .c-product__title, h3, h4').first().text().trim();
+                const name = $el.find('.c-product__name, .c-product__title, h3, h4').first().text().trim();
                 if (!name || name.length < 3) return;
 
-                // Price
-                const priceText = $el.find('[class*="c-product__price"]:not([class*="old"])').first().text();
+                // Price - look for the main price element, not old-price
+                const priceEl = $el.find('.c-product__price').first();
+                const priceText = priceEl.text();
                 const discountPrice = parsePrice(priceText);
                 if (!discountPrice) return;
 
                 // Old price
-                const oldPriceText = $el.find('[class*="c-product__old-price"], s, del').first().text();
-                const originalPrice = parsePrice(oldPriceText);
+                const oldPriceEl = $el.find('.c-product__old-price, s, del').first();
+                const originalPrice = parsePrice(oldPriceEl.text());
 
                 // Discount %
-                const discountText = $el.find('[class*="c-product__discount"], [class*="badge"]').first().text();
-                const percMatch = discountText.match(/-?\s*(\d+)\s*%/);
+                const discountEl = $el.find('.c-product__discount, .c-product__badge').first();
+                const percMatch = discountEl.text().match(/-?\s*(\d+)\s*%/);
                 const discountPercent = percMatch
                     ? parseInt(percMatch[1], 10)
                     : calcDiscount(originalPrice, discountPrice);
 
                 // Image
                 const imgEl = $el.find('img').first();
-                const imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || null;
+                const imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-lazy-src') || null;
 
                 // Link
-                let productUrl = $el.find('a[href]').first().attr('href') || null;
+                let productUrl = $el.find('a[href]').first().attr('href') || $el.closest('a').attr('href') || null;
                 if (productUrl && !productUrl.startsWith('http')) {
                     productUrl = 'https://www.norfa.lt' + productUrl;
                 }
 
                 // Dates
-                const dateText = $el.find('[class*="date"], [class*="valid"], time, small').first().text();
+                const dateText = $el.find('.c-product__date, [class*="valid"], time, small').first().text();
                 const dateMatch = dateText.match(/(\d{2})[.\-](\d{2})\s*[-–]\s*(\d{2})[.\-](\d{2})/);
                 let validFrom: string | null = null;
                 let validTo: string | null = null;
