@@ -14,7 +14,8 @@
         "scrape:rimi": "tsx src/adapters/rimi/run.ts",
         "scrape:norfa": "tsx src/adapters/norfa/run.ts",
         "scrape:akcijos": "tsx src/adapters/akcijos-lt/run.ts",
-        "scrape:all": "tsx src/adapters/akcijos-lt/run.ts"
+        "scrape:hybrid": "tsx src/adapters/hybrid-runner.ts",
+        "scrape:all": "tsx src/adapters/hybrid-runner.ts"
     },
     "dependencies": {
         "@google/genai": "^1.41.0",
