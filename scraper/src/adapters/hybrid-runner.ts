@@ -222,7 +222,7 @@ const NORFA_SECTIONS = [
 ];
 
 // Non-food filter for Norfa (they sell household items too)
-const NORFA_NON_FOOD = /\b(purkštuv|atsuktuv|replės|gręžtuv|pjūklas|terkšlė|gulsčiukas|šalmas|suvirinimo|švitrini|įranki|skustuvas|ausinės|ausinių|džiovintuvas|garintuvas|kolonėlė|klaviatūra|pelė onex|irigatorius|lygintuvas|bluetooth|įkrovikl|elementai gp|baterij|akumuliator|šiukšlių maišai|šluostė|skalbimo|plovikl|rankšluoščiai|tualetinis popierius|oro gaiviklis|indaplov|servetėlės|ausų krapštukai|dezodorantas|šampūnas|veido kremas|kūno kremas|dantų pasta|plaukų dažai|nagų lakas|kraikas|kojinės|pirštinės|šlepetės|avalynė|pėdkelnės|daiginimo|aušinimo skystis|stiklinis ind|termosas|maisto papildas|žaislas|lego|dėlionė|ingco|onex|clatronic|bomann|esperanza|emos|prohelfer|glamour|philips|tefal|princess)\b/i;
+const NORFA_NON_FOOD = /\b(purkštuv|atsuktuv|replės|gręžtuv|pjūklas|terkšlė|gulsčiukas|šalmas|suvirinimo|švitrini|įranki|skustuvas|ausinės|ausinių|džiovintuvas|garintuvas|kolonėlė|klaviatūra|pelė onex|irigatorius|lygintuvas|bluetooth|įkrovikl|elementai gp|baterij|akumuliator|šiukšlių maišai|šluostė|skalbimo|plovikl|rankšluoščiai|tualetinis popierius|oro gaiviklis|indaplov|servetėlės|ausų krapštukai|dezodorantas|šampūnas|veido kremas|kūno kremas|dantų pasta|plaukų dažai|nagų lakas|kraikas|kojinės|pirštinės|šlepetės|avalynė|pėdkelnės|daiginimo|aušinimo skystis|stiklinis ind|termosas|maisto papildas|žaislas|lego|dėlionė|ingco|onex|clatronic|bomann|esperanza|emos|prohelfer|glamour|philips|tefal|princess|šašlykinė art|surenkama šašlykinė|kapų žvakė|žvakė art)\b/i;
 
 async function fetchNorfa(): Promise<HybridProduct[]> {
     console.log('[Norfa Direct] Fetching from HTML...');
