@@ -103,8 +103,25 @@ async function fetchWithRetry(url: string, opts: RequestInit = {}, retries = 2):
 async function fetchIki(): Promise<HybridProduct[]> {
     console.log('[IKI Direct] Fetching from REST API...');
 
-    const res = await fetchWithRetry('https://iki.lt/wp-json/iki-app/v1/promos');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let res: Response;
+    try {
+        res = await fetchWithRetry('https://iki.lt/wp-json/iki-app/v1/promos', {
+            headers: {
+                'Accept': 'application/json',
+                'Accept-Language': 'lt-LT,lt;q=0.9,en;q=0.8',
+            },
+            signal: controller.signal,
+        });
+    } catch (err) {
+        console.error(`[IKI Direct] Fetch failed: ${err}`);
+        return [];
+    } finally {
+        clearTimeout(timeout);
+    }
     const text = await res.text();
+    console.log(`[IKI Direct] Response: ${res.status}, length: ${text.length}`);
 
     // Validate JSON response (API might return HTML on block/error)
     let data: any[];
@@ -482,6 +499,10 @@ async function main() {
     ]);
 
     // Extract results with fallback handling
+    if (ikiResult.status === 'rejected') console.error('[IKI Direct] FAILED:', ikiResult.reason);
+    if (norfaResult.status === 'rejected') console.error('[Norfa Direct] FAILED:', norfaResult.reason);
+    if (rimiResult.status === 'rejected') console.error('[Rimi Direct] FAILED:', rimiResult.reason);
+
     const ikiProducts = ikiResult.status === 'fulfilled' ? ikiResult.value : [];
     const norfaProducts = norfaResult.status === 'fulfilled' ? norfaResult.value : [];
     const rimiProducts = rimiResult.status === 'fulfilled' ? rimiResult.value : [];
