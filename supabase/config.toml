@@ -1,0 +1,32 @@
+# Supabase CLI config. Skirtas kontroliuoti per-function settings.
+# Svarbiausia dalis - verify_jwt = false kiekvienai funkcijai, kurios auth
+# tikrinimą darome patys funkcijos viduje. Default'e Supabase platform'as
+# atmeta OPTIONS preflight request'us be Authorization header'io (grąžina
+# 401), ir browser'is gauna CORS error. Kai verify_jwt = false, platform'as
+# nebefiltruoja ir mūsų CORS_HEADERS ant OPTIONS veikia.
+
+project_id = "cznptaeadgglhycclihc"
+
+[functions.gemini-proxy]
+# Auth tikrinam patys (verifyUser() funkcijoje) - ne per platform JWT gate.
+verify_jwt = false
+
+[functions.spoonacular-proxy]
+verify_jwt = false
+
+[functions.generate-meal-plan]
+# Ši funkcija tikrina JWT viduje; platform gate'o nereikia.
+verify_jwt = false
+
+[functions.manage-household]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
+
+[functions.send-suggestion-notification]
+# PAA11: auth tikrinam funkcijos viduje (verifyRes per auth/v1/user).
+verify_jwt = false
+
+# debug-keys - debug tool'as, turi likti uz platform JWT gate'o.
+# Neįtraukiam verify_jwt = false, kad default (true) liktų.

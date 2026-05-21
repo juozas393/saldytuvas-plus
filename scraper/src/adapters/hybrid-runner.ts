@@ -66,6 +66,141 @@ function dedup(products: HybridProduct[]): HybridProduct[] {
     });
 }
 
+// ─── Unified category system ───────────────────────────────────────────
+const CATEGORY_MAP: Record<string, string> = {
+    // IKI / Lidl / Maxima (from akcijos.lt)
+    'Mėsa ir paukštiena': 'Mėsa ir žuvis',
+    'Žuvis ir jūros gėrybės': 'Mėsa ir žuvis',
+    'Mėsa ir žuvis': 'Mėsa ir žuvis',
+    'Pienas ir pieno gaminiai': 'Pieno produktai',
+    'Sūriai': 'Pieno produktai',
+    'Jogurtai ir desertai': 'Pieno produktai',
+    'Pieno produktai': 'Pieno produktai',
+    'Kiaušiniai': 'Pieno produktai',
+    'Duonos gaminiai': 'Duona ir konditerija',
+    'Bandelės ir pyragaičiai': 'Duona ir konditerija',
+    'Konditerija': 'Duona ir konditerija',
+    'RIMI konditerija': 'Duona ir konditerija',
+    'Miltai ir kepimo produktai': 'Duona ir konditerija',
+    'Vaisiai ir uogos': 'Vaisiai ir daržovės',
+    'Daržovės': 'Vaisiai ir daržovės',
+    'Vaisiai, daržovės': 'Vaisiai ir daržovės',
+    'Šaldytos daržovės ir vaisiai': 'Vaisiai ir daržovės',
+    'Saldumynai ir užkandžiai': 'Saldumynai ir užkandžiai',
+    'Traškučiai ir užkandžiai': 'Saldumynai ir užkandžiai',
+    'Saldumynai': 'Saldumynai ir užkandžiai',
+    'Ledai': 'Saldumynai ir užkandžiai',
+    'Riešutai': 'Saldumynai ir užkandžiai',
+    'Kruopos ir makaronai': 'Bakalėja',
+    'Padažai ir prieskoniai': 'Bakalėja',
+    'Konservai': 'Bakalėja',
+    'Aliejus ir riebalai': 'Bakalėja',
+    'Pusryčių produktai': 'Bakalėja',
+    'Bakalėja': 'Bakalėja',
+    'Šaldyti pusgaminiai': 'Šaldytas maistas',
+    'Šaldytas maistas': 'Šaldytas maistas',
+    'Paruoštas maistas': 'Paruoštas maistas',
+    'Augaliniai produktai': 'Paruoštas maistas',
+
+    // Non-food categories (preserve as-is, excluded from meal planning)
+    'Kosmetika ir higiena': 'Kosmetika ir higiena',
+    'Buitinė chemija': 'Buitinė chemija',
+    'Gyvūnų prekės': 'Gyvūnų prekės',
+    'Augalai': 'Augalai',
+    'Namų ūkis': 'Namų ūkis',
+    // Akcijos.lt raw non-food category names
+    'Buitinės chemijos prekės': 'Buitinė chemija',
+    'Buitinės chemijos': 'Buitinė chemija',
+    'Kosmetikos prekės': 'Kosmetika ir higiena',
+    'Kosmetikos': 'Kosmetika ir higiena',
+    'Asmens higienos prekės': 'Kosmetika ir higiena',
+    'Asmens higiena': 'Kosmetika ir higiena',
+    'Higienos prekės': 'Kosmetika ir higiena',
+    'Gyvūnų': 'Gyvūnų prekės',
+    'Kūdikių prekės': 'Kūdikių prekės',
+    'Kūdikių': 'Kūdikių prekės',
+    'Vaikų ir kūdikių': 'Kūdikių prekės',
+    'Namų apyvokos prekės': 'Namų ūkis',
+    'Namų ūkio ir laisvalaikio': 'Namų ūkis',
+    'Pramonės prekės': 'Namų ūkis',
+    'Vaistinės prekės': 'Sveikata',
+    'Medicininės prekės': 'Sveikata',
+    'Vitaminai ir papildai': 'Sveikata',
+    'Įvairios prekės': 'Namų ūkis',
+};
+
+function categorizeByName(name: string): string {
+    const n = name.toLowerCase();
+    // Note: using (?:^|[\s.,/(]) instead of \b because \b doesn't work with Lithuanian chars (š,ž,č,ė etc.)
+    const B = '(?:^|[\\s.,/(])'; // word-start boundary that works with Unicode
+    if (new RegExp(`${B}(dešr|kump|lašin|kiaulien|vištien|jautien|mės|kalakut|kotlet|farsas|šonin|servelat|skilandis|rūkyt|maltint|dešrain|paukštien|antiena|veršien|lašiš|silkė|silkių|menkė|žuv|krevet|tun|upėtak|sardin|skumbr|ikra|jūros|krab|pašteta|sardel|ešer|saliam|kepenėl|šašlyk|šoninė|kiaul|vyniotin|dorada|vilkešer)`).test(n)) return 'Mėsa ir žuvis';
+    if (new RegExp(`${B}(pien|sūri|jogurt|grietin|varšk|sviest|kefyr|kiaušin|mocarela|mascarpone|mozzarella|džiug|feta|brie|camembert|cheddar|gouda|parmezan|sūrel|rūgpien)`).test(n)) return 'Pieno produktai';
+    if (new RegExp(`${B}(duon|baton|pyrag|bandelė|kruasan|tortas|keksas|milt|sausain|muffin|vafli|meduol|spurg|konditer|lavašas|pita|pynė|džiūvėsė|džiūvėsiai)`).test(n)) return 'Duona ir konditerija';
+    if (new RegExp(`${B}(obuol|banan|braškė|mang|avokad|citrin|apelsin|arbūz|melon|vynuog|ananasa|pomidor|agurk|mork|bulv|kopūst|paprik|svogūn|salot|česnak|brokoliai|kukurūz|špinat|burokėl|cukinij|gryb|baklažan|moliūg|daržov|vaisi|uog|slyv|persik|nektarin|ridik|žirnių|pupu)`).test(n)) return 'Vaisiai ir daržovės';
+    if (new RegExp(`${B}(šokolad|saldain|traškuč|čips|ledai|plombyras|riešut|chalva|zefyr|marmelad|karamel|batonel|snickers|mars|twix|skittles|popcorn|kreker|dražė)`).test(n)) return 'Saldumynai ir užkandžiai';
+    if (new RegExp(`${B}(šald|koldūn|blyneli|pelmen|cepelinai|gyoza|kalmar)`).test(n)) return 'Šaldytas maistas';
+    if (new RegExp(`${B}(sumuštini|paruošt|gatav|kepta.*višt|grilio|pica |pizza|kibinai|apkepėl)`).test(n)) return 'Paruoštas maistas';
+    if (new RegExp(`${B}(makaronai|spageti|kruop|ryžiai|padaž|kečup|majonez|aliej|konserv|kons\\.|pupelės|cukr|drusk|mieli|dribsni|granola|avižos|uogiena|džemas|medus|marinuot|sultinys|actas|sirup|krienai|miso|sezam|imbier|rizotas|tofu|kokos|pistacij.*krem)`).test(n)) return 'Bakalėja';
+    return 'Kita';
+}
+
+// Patterns to detect non-food categories from raw akcijos.lt category strings
+const NON_FOOD_CAT_RULES: Array<{ pattern: RegExp; unified: string }> = [
+    { pattern: /kosmetik|higien|asmens/i, unified: 'Kosmetika ir higiena' },
+    { pattern: /buitin|chemij|valym/i, unified: 'Buitinė chemija' },
+    { pattern: /gyvūn/i, unified: 'Gyvūnų prekės' },
+    { pattern: /kūdiki|vaik/i, unified: 'Kūdikių prekės' },
+    { pattern: /vaist|medicinin|vitamin|papild/i, unified: 'Sveikata' },
+    { pattern: /namų apyvok|namų ūkio|pramonės|įvairios|laisvalaikio/i, unified: 'Namų ūkis' },
+    { pattern: /drabužiai|avalyn|tekstil/i, unified: 'Namų ūkis' },
+];
+
+// Classify non-food products by name (fallback when category is missing/generic)
+function classifyNonFoodByName(name: string): string | null {
+    const n = name.toLowerCase();
+    if (/šampūn|dušo|muilas|dezodorant|dantų past|plaukų|veido krem|kūno krem|odos|burnos|nagų|makiažo|lūpų|skustuv|higienin|įklot|kremas cien|kremas hydra/.test(n)) return 'Kosmetika ir higiena';
+    if (/skalbim|skalbikl|plovikl|valikl|wc valikl|wc.*gaivikl|šluost|servetėl|popierini|rankšluosč|oro gaivikl|indaplov|indapl\.|šiukšlių|kempinė|šepet|šluot|maišeli|grindų plovim|tualetinis popierius|fairy|somat|finish/.test(n)) return 'Buitinė chemija';
+    if (/šunų|kačių|gyvūn|kraikas|šunų ėdal|kačių skanėst/.test(n)) return 'Gyvūnų prekės';
+    if (/sodinuk|gėlių|trąš|augalas|spygliuotis|gerbera|sėklos.*augal|beirutis|atramų augal|šalavijų sėkl/.test(n)) return 'Augalai';
+    if (/sauskeln|kūdiki|vaikų pižam/.test(n)) return 'Kūdikių prekės';
+    if (/vitamin|maisto papild|pirmosios pagalb/.test(n)) return 'Sveikata';
+    if (/šašlykin|įranki|gręžtuv|pjūkl|žvak|termosas|ausinė|kolonėlė|bluetooth|įkrovikl|baterij|lygintuv|džiovintuv|kirpimo mašinėl|gruzdintuvė|orkaitė|dulki|siurbl|ventiliator|radiator|patalynė|užvalkal|pledas|antklod|kilim|žaislas|lego|dėlion|kojinės|pirštinės|šlepetės|avalynė|medžio angli|jaukas|jauko|lipni dekoracij|akinių|keptuvė|replės|replių|atsuktuvai|atsuktuvų|antgalių|poveržlių|dirželių|spintelė|patiesaliu|sulčiaspaudė|patikros kamer|dekoratyvin|pistoletas rms|dėtuvių|muilo burbul|kepimo form|kepimo grotėl|kepimo grotel|termometr|pagalvių rinkin|peilių rinkin|puodų rinkin|teptukų rinkin|dėžė art|šaldytuvo dėkl|žaidimo rinkin|beer pong/.test(n)) return 'Namų ūkis';
+    return null;
+}
+
+// Non-food unified categories (used to detect if CATEGORY_MAP returned a non-food result)
+const NON_FOOD_UNIFIED = new Set([
+    'Kosmetika ir higiena', 'Buitinė chemija', 'Gyvūnų prekės',
+    'Augalai', 'Namų ūkis', 'Kūdikių prekės', 'Sveikata',
+]);
+
+function unifyCategory(product: HybridProduct): string {
+    // 1. Exact match in CATEGORY_MAP
+    if (product.category && CATEGORY_MAP[product.category]) {
+        const mapped = CATEGORY_MAP[product.category];
+        // For non-food results, check if name suggests a more specific category
+        if (NON_FOOD_UNIFIED.has(mapped)) {
+            const nameOverride = classifyNonFoodByName(product.name);
+            return nameOverride || mapped;
+        }
+        return mapped;
+    }
+    // 2. Partial match for non-food categories (handles raw akcijos.lt names)
+    if (product.category) {
+        for (const rule of NON_FOOD_CAT_RULES) {
+            if (rule.pattern.test(product.category)) {
+                const nameOverride = classifyNonFoodByName(product.name);
+                return nameOverride || rule.unified;
+            }
+        }
+    }
+    // 3. Try food classification by name
+    const byName = categorizeByName(product.name);
+    if (byName !== 'Kita') return byName;
+    // 4. If categorizeByName returned Kita, try non-food classification by name
+    return classifyNonFoodByName(product.name) || 'Kita';
+}
+
 // Drink/non-food filter reused across adapters
 const DRINK_PATTERN = /\b(kava|kavos|coffee|espresso|cappuccino|latte|arbata|arbatos|tea|sultys|sul[čc]i[ųu]|g[eė]rimas|g[eė]rim|limonadas|vanduo|vandens|mineralin|gazuot|alus|al[aų]|vynas|vyn[oų]|degtinė|brendis|viskis|konjak|šamp[aū]n|sidras|energin|cola|pepsi|fanta|sprite|redbull|monster|beer|wine|vodka|gin\b|rum\b|whisky|tequila|liqueur|cocktail|smoothie|milkshake)\b/i;
 
@@ -222,7 +357,7 @@ const NORFA_SECTIONS = [
 ];
 
 // Non-food filter for Norfa (they sell household items too)
-const NORFA_NON_FOOD = /\b(purkštuv|atsuktuv|replės|gręžtuv|pjūklas|terkšlė|gulsčiukas|šalmas|suvirinimo|švitrini|įranki|skustuvas|ausinės|ausinių|džiovintuvas|garintuvas|kolonėlė|klaviatūra|pelė onex|irigatorius|lygintuvas|bluetooth|įkrovikl|elementai gp|baterij|akumuliator|šiukšlių maišai|šluostė|skalbimo|plovikl|rankšluoščiai|tualetinis popierius|oro gaiviklis|indaplov|servetėlės|ausų krapštukai|dezodorantas|šampūnas|veido kremas|kūno kremas|dantų pasta|plaukų dažai|nagų lakas|kraikas|kojinės|pirštinės|šlepetės|avalynė|pėdkelnės|daiginimo|aušinimo skystis|stiklinis ind|termosas|maisto papildas|žaislas|lego|dėlionė|ingco|onex|clatronic|bomann|esperanza|emos|prohelfer|glamour|philips|tefal|princess|šašlykinė art|surenkama šašlykinė|kapų žvakė|žvakė art)\b/i;
+const NORFA_NON_FOOD = /\b(purkštuv|atsuktuv|replės|gręžtuv|pjūklas|terkšlė|gulsčiukas|šalmas|suvirinimo|švitrini|įranki|skustuvas|ausinės|ausinių|džiovintuvas|garintuvas|kolonėlė|klaviatūra|pelė onex|irigatorius|lygintuvas|bluetooth|įkrovikl|elementai gp|baterij|akumuliator|šiukšlių maišai|šiukšlių|šluostė|skalbimo|skalbikl|plovikl|rankšluoščiai|rankšluost|popierini|tualetinis popierius|tualetini|oro gaiviklis|indaplov|servetėlės|servetėl|ausų krapštukai|dezodorantas|šampūnas|veido kremas|kūno kremas|dantų pasta|plaukų dažai|nagų lakas|kraikas|kojinės|pirštinės|šlepetės|avalynė|pėdkelnės|daiginimo|aušinimo skystis|stiklinis ind|termosas|maisto papildas|žaislas|lego|dėlionė|ingco|onex|clatronic|bomann|esperanza|emos|prohelfer|glamour|philips|tefal|princess|šašlykinė art|surenkama šašlykinė|kapų žvakė|žvakė art|sauskeln|patalynė|užvalkal|spalvinuk|knyga mano pirmi|kirpimo mašinėl|gruzdintuvė|šunų ėdal|kačių skanėst|trąšos|trąš.*emolus|jaukas vde|jauko pried|medžio angli|pirmosios pagalb|kvapniosios granul|lipni dekoracij|muilo burbul|sodinuk|gėlių svogūnėl)\b/i;
 
 async function fetchNorfa(): Promise<HybridProduct[]> {
     console.log('[Norfa Direct] Fetching from HTML...');
@@ -262,12 +397,14 @@ async function fetchNorfa(): Promise<HybridProduct[]> {
                 const oldPriceEl = $el.find('.c-product__old-price, s, del').first();
                 const originalPrice = parsePrice(oldPriceEl.text());
 
-                // Discount %
+                // Discount % - verify badge value against actual prices
                 const discountEl = $el.find('.c-product__discount, .c-product__badge').first();
                 const percMatch = discountEl.text().match(/-?\s*(\d+)\s*%/);
-                const discountPercent = percMatch
-                    ? parseInt(percMatch[1], 10)
-                    : calcDiscount(originalPrice, discountPrice);
+                const badgePercent = percMatch ? parseInt(percMatch[1], 10) : null;
+                const calcPercent = calcDiscount(originalPrice, discountPrice);
+                const discountPercent = (badgePercent && calcPercent && Math.abs(badgePercent - calcPercent) > 5)
+                    ? calcPercent
+                    : (badgePercent ?? calcPercent);
 
                 // Image
                 const imgEl = $el.find('img').first();
@@ -290,9 +427,25 @@ async function fetchNorfa(): Promise<HybridProduct[]> {
                     validTo = formatDate(new Date(year, parseInt(dateMatch[3], 10) - 1, parseInt(dateMatch[4], 10)));
                 }
 
-                // Filter non-food
-                if (NORFA_NON_FOOD.test(name.toLowerCase())) return;
+                // Filter drinks only (keep non-food with category)
                 if (!isFoodProduct(name)) return;
+
+                // Classify non-food items into categories instead of skipping
+                let category: string | null = null;
+                if (NORFA_NON_FOOD.test(name.toLowerCase())) {
+                    const lower = name.toLowerCase();
+                    if (/šampūn|dušo|muilas|dezodorant|dantų past|plaukų|veido|kūno|odos|burnos/.test(lower)) {
+                        category = 'Kosmetika ir higiena';
+                    } else if (/skalbim|plovikl|valikl|šluost|servetėl|popierius|oro gaivikl|indaplov/.test(lower)) {
+                        category = 'Buitinė chemija';
+                    } else if (/šunų|kačių|gyvūn|kraikas/.test(lower)) {
+                        category = 'Gyvūnų prekės';
+                    } else if (/sodinuk|gėlių|trąš/.test(lower)) {
+                        category = 'Augalai';
+                    } else {
+                        category = 'Namų ūkis';
+                    }
+                }
 
                 allProducts.push({
                     store: 'norfa',
@@ -302,7 +455,7 @@ async function fetchNorfa(): Promise<HybridProduct[]> {
                     discountPercent,
                     validFrom,
                     validTo,
-                    category: null,
+                    category,
                     imageUrl,
                     unit: null,
                     pricePerUnit: null,
@@ -379,8 +532,13 @@ async function fetchRimi(): Promise<HybridProduct[]> {
                     if (!name || name.length < 3) return;
 
                     // Current price
+                    // Rimi DOM: <span class="sr-only">2.49 € per kg</span>
+                    //           <span aria-hidden="true">2</span>
+                    //           <div aria-hidden="true"><sup>49</sup><sub>€/kg</sub></div>
+                    // SVARBU: children('span').first() gauna sr-only span su visu tekstu,
+                    // todėl naudojam aria-hidden span (turi tik sveikąją dalį).
                     const priceTag = $card.find('.price-tag.card__price, .card__price').first();
-                    const wholeEl = priceTag.children('span').first();
+                    const wholeEl = priceTag.find('span[aria-hidden="true"]').first();
                     const centsEl = priceTag.find('sup').first();
                     const whole = wholeEl.text().replace(/[^0-9]/g, '');
                     const cents = centsEl.text().replace(/[^0-9]/g, '') || '00';
@@ -388,10 +546,20 @@ async function fetchRimi(): Promise<HybridProduct[]> {
                     if (!discountPrice || discountPrice <= 0) return;
 
                     // Old price
+                    // Rimi DOM: <span class="sr-only">Regular price: 0,99 €</span>
+                    //           <span aria-hidden="true">0,99€</span>
+                    // Nėra sup elementų - kaina viename span kaip "0,99€"
                     const oldTag = $card.find('.old-price-tag.card__old-price, .card__old-price').first();
-                    const oldText = oldTag.text();
-                    const oldMatch = oldText.match(/(\d+)[,.](\d{2})/);
-                    const originalPrice = oldMatch ? parseFloat(`${oldMatch[1]}.${oldMatch[2]}`) : null;
+                    let originalPrice: number | null = null;
+                    if (oldTag.length) {
+                        const oldAriaSpan = oldTag.find('span[aria-hidden="true"]').first();
+                        if (oldAriaSpan.length) {
+                            const oldText = oldAriaSpan.text().trim();
+                            const oldMatch = oldText.match(/(\d+)[,.](\d{2})/);
+                            if (oldMatch) originalPrice = parseFloat(`${oldMatch[1]}.${oldMatch[2]}`);
+                        }
+                        if (originalPrice !== null && originalPrice > 500) originalPrice = null;
+                    }
 
                     // Loyalty price
                     const loyaltyEl = $card.find('.price-label__price').first();
@@ -416,12 +584,18 @@ async function fetchRimi(): Promise<HybridProduct[]> {
                         finalDiscount = loyaltyPrice!;
                     }
 
-                    // Unit price
-                    const pricePerUnit = $card.find('.card__price-per').first().text().trim() || null;
+                    // Unit price - naudojam aria-hidden span (sr-only turi "Price per unit:" prefixą)
+                    const ppuEl = $card.find('.card__price-per').first();
+                    const ppuAriaSpan = ppuEl.find('span[aria-hidden="true"]').first();
+                    const rawPPU = (ppuAriaSpan.length ? ppuAriaSpan.text() : ppuEl.text()).replace(/\s+/g, ' ').trim();
+                    const pricePerUnit = rawPPU || null;
 
-                    // Image
+                    // Image (upgrade Cloudinary quality: q_1→q_auto, 216→512px)
                     const imgEl = $card.find('img').first();
-                    const imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || null;
+                    let imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || null;
+                    if (imageUrl && imageUrl.includes('cloudinary.com')) {
+                        imageUrl = imageUrl.replace(/q_\d+/, 'q_auto').replace(/h_\d+/, 'h_512').replace(/w_\d+/, 'w_512');
+                    }
 
                     // Product URL
                     let productUrl = $card.find('a[href]').first().attr('href') || null;
@@ -549,8 +723,46 @@ async function main() {
     console.log(`  Maxima: Akcijos.lt (${maxima.length} products)`);
     console.log(`  Lidl:   Akcijos.lt (${lidl.length} products)`);
 
-    // Save per-store JSON files
+    // Unify categories across all stores
     const stores = { iki, norfa, rimi, maxima, lidl };
+    for (const products of Object.values(stores)) {
+        for (const p of products) {
+            p.category = unifyCategory(p);
+        }
+    }
+
+    // Assign deal type labels to products that don't have one
+    for (const products of Object.values(stores)) {
+        for (const p of products) {
+            if (p.dealType) continue;
+            if (p.discountPercent && p.discountPercent > 0) {
+                // Has discount % but no label - generic discount
+                p.dealType = 'NUOLAIDA';
+            } else {
+                // No discount %, no original price - fixed promo price
+                p.dealType = 'AKCIJA';
+            }
+        }
+    }
+
+    // Global dedup: remove exact duplicates (same store + name + price + deal type)
+    // Keeps the first occurrence (prefers entry with more data)
+    for (const [storeName, products] of Object.entries(stores)) {
+        const seen = new Set<string>();
+        const before = products.length;
+        const deduplicated = products.filter(p => {
+            const key = `${p.name}|${p.discountPrice}|${p.dealType}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+        (stores as any)[storeName] = deduplicated;
+        if (before !== deduplicated.length) {
+            console.log(`[Dedup] ${storeName}: removed ${before - deduplicated.length} duplicates (${before} -> ${deduplicated.length})`);
+        }
+    }
+
+    // Save per-store JSON files
     let total = 0;
 
     for (const [storeName, products] of Object.entries(stores)) {
@@ -560,8 +772,8 @@ async function main() {
         total += products.length;
     }
 
-    // Save combined file
-    const all = [...iki, ...norfa, ...rimi, ...maxima, ...lidl];
+    // Save combined file (use stores object which has deduped data)
+    const all = Object.values(stores).flat();
     fs.writeFileSync('./all_products.json', JSON.stringify(all, null, 2));
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);

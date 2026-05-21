@@ -7,17 +7,19 @@ skinparam maxmessagesize 60
 
 title Redaguoti mitybos planą - Sequence Diagram
 
-actor "Šeimos\nnarys" as User
+actor "Šeimos\nadministratorius" as User
 participant "MealPlanningPage\n<<screen>>" as Page
 participant "MealPlanningController\n<<control>>" as Controller
 participant "MealPlanningService" as MealService
+participant "GeminiServiceBoundary\n<<boundary>>" as Gemini
+participant "SpoonacularServiceBoundary\n<<boundary>>" as Spoonacular
 participant "DishEntity\n<<entity>>" as Dish
 participant "MealPlanEntity\n<<entity>>" as MealPlan
 participant "ShoppingListService" as ShoppingService
 participant "SupabaseClient\n(Core.Network)" as Supabase
 database "Supabase DB\n(meal_plans)" as Database
 
-== SCENARIJUS: Vartotojas redaguoja mitybos planą ==
+== SCENARIJUS: Administratorius redaguoja mitybos planą ==
 
 User -> Page: Paspaudžia "Redaguoti planą"
 activate Page
@@ -55,21 +57,33 @@ alt Redaguoti konkretų valgį
     activate Page
     Page -> Controller: EditMealEvent(day, mealType)
     activate Controller
-    
+
     alt Regeneruoti variantus
         Controller -> MealService: regenerateMealVariants(\n  day, mealType, userGoals\n)
         activate MealService
-        
-        MealService -> MealService: Generuoti naujus 3 variantus\n(ta pati logika kaip sukūrimas)
-        
+
+        MealService -> Gemini: generateMealIntent(\n  caloriesRange,\n  dietType,\n  allergies,\n  preferences\n)
+        activate Gemini
+        Gemini -> Gemini: POST /v1/models/gemini-pro
+        Gemini --> MealService: MealIntent JSON\n(structured preferences)
+        deactivate Gemini
+
+        MealService -> Spoonacular: searchRecipes(\n  mealIntent,\n  caloriesRange,\n  3 variants per meal\n)
+        activate Spoonacular
+        Spoonacular -> Spoonacular: GET /recipes/complexSearch\n+ GET /recipes/{id}/information
+        Spoonacular --> MealService: List<Recipe> (3 variants)
+        deactivate Spoonacular
+
+        MealService -> MealService: Sujungti variantus ir\nperskaičiuoti kalorijas
+
         MealService --> Controller: List<Dish> (3 variants)
         deactivate MealService
-        
+
         Controller --> Page: MealVariantsGeneratedState(variants)
         deactivate Controller
         Page -> User: Rodo 3 naujus variantus
         deactivate Page
-        
+
         User -> Page: Pasirenka variantą
         activate Page
         Page -> Controller: SelectMealVariantEvent(selectedDish)
@@ -82,7 +96,7 @@ alt Redaguoti konkretų valgį
         deactivate Controller
         Page --> User: Rodo pasirinktą variantą
         deactivate Page
-        
+
     else Pridėti ranka
         User -> Page: Paspaudžia "Pridėti ranka"
         activate Page
@@ -92,7 +106,7 @@ alt Redaguoti konkretų valgį
         deactivate Controller
         Page -> User: Rodo formą:\n- Pavadinimas\n- Ingredientai\n- Kalorijos\n- Porcijų dydis
         deactivate Page
-        
+
         User -> Page: Suveda informaciją ir išsaugo
         activate Page
         Page -> Controller: SaveManualMealEvent(mealData)
@@ -105,7 +119,7 @@ alt Redaguoti konkretų valgį
         deactivate Controller
         Page --> User: Patiekalas pridėtas
         deactivate Page
-        
+
     else Lock/Unlock valgį
         User -> Page: Paspaudžia "Lock/Unlock"
         activate Page
@@ -117,14 +131,14 @@ alt Redaguoti konkretų valgį
         Page --> User: Valgis užrakintas/atlaisvintas
         deactivate Page
     endif
-    
+
     Controller -> MealPlan: updateMeal(day, mealType, dish)
     activate MealPlan
     MealPlan --> Controller: Updated MealPlanEntity
     deactivate MealPlan
-    
+
     Controller -> Controller: convertToJson(mealPlan)
-    
+
     Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
     activate Supabase
     Supabase -> Database: UPDATE meal_plans\nSET meals = ?\nWHERE id = ?
@@ -133,7 +147,7 @@ alt Redaguoti konkretų valgį
     deactivate Database
     Supabase --> Controller: Updated data
     deactivate Supabase
-    
+
 else Pridėti naują valgį
     User -> Page: Paspaudžia "Pridėti valgį"
     activate Page
@@ -143,7 +157,7 @@ else Pridėti naują valgį
     deactivate Controller
     Page -> User: Rodo formą (diena, valgio tipas, receptas)
     deactivate Page
-    
+
     User -> Page: Suveda arba pasirenka receptą
     activate Page
     Page -> Controller: SaveNewMealEvent(mealData)
@@ -156,7 +170,7 @@ else Pridėti naują valgį
     activate MealPlan
     MealPlan --> Controller: Updated MealPlanEntity
     deactivate MealPlan
-    
+
     Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
     activate Supabase
     Supabase -> Database: UPDATE meal_plans SET meals = ?\nWHERE id = ?
@@ -169,7 +183,7 @@ else Pridėti naują valgį
     deactivate Controller
     Page --> User: Valgis pridėtas
     deactivate Page
-    
+
 else Pašalinti valgį
     User -> Page: Paspaudžia "Pašalinti" ant valgio
     activate Page
@@ -179,18 +193,18 @@ else Pašalinti valgį
     deactivate Controller
     Page -> User: Rodo patvirtinimo dialogą
     deactivate Page
-    
-    alt Vartotojas patvirtina
+
+    alt Administratorius patvirtina
         User -> Page: Paspaudžia "Taip"
         activate Page
         Page -> Controller: ConfirmRemoveMealEvent(day, mealType)
         activate Controller
-        
+
         Controller -> MealPlan: removeMeal(day, mealType)
         activate MealPlan
         MealPlan --> Controller: Updated MealPlanEntity
         deactivate MealPlan
-        
+
         Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
         activate Supabase
         Supabase -> Database: UPDATE meal_plans SET meals = ?\nWHERE id = ?
@@ -199,28 +213,41 @@ else Pašalinti valgį
         deactivate Database
         Supabase --> Controller: Success
         deactivate Supabase
-        
+
         Controller --> Page: MealRemovedState()
         deactivate Controller
         Page --> User: Valgis pašalintas
         deactivate Page
     endif
-    
+
 else Regeneruoti visą planą
     User -> Page: Paspaudžia "Regeneruoti planą"
     activate Page
     Page -> Controller: RegenerateMealPlanEvent(planId)
     activate Controller
-    
+
     Controller -> MealService: regenerateMealPlan(\n  mealPlan, userGoals\n)
     activate MealService
-    
+
     MealService -> MealService: Filtruoti užrakintus valgius\n(locked meals nekeičiami)
-    MealService -> MealService: Regeneruoti neužrakintus valgius
-    
+
+    MealService -> Gemini: generateMealIntent(\n  caloriesRange,\n  dietType,\n  allergies,\n  preferences\n)
+    activate Gemini
+    Gemini -> Gemini: POST /v1/models/gemini-pro
+    Gemini --> MealService: MealIntent JSON
+    deactivate Gemini
+
+    MealService -> Spoonacular: searchRecipes(\n  mealIntent,\n  caloriesRange,\n  3 variants per meal\n)
+    activate Spoonacular
+    Spoonacular -> Spoonacular: GET /recipes/complexSearch\n+ GET /recipes/{id}/information
+    Spoonacular --> MealService: List<Recipe> (3 variants per meal)
+    deactivate Spoonacular
+
+    MealService -> MealService: Regeneruoti neužrakintus valgius\nsu naujais receptais
+
     MealService --> Controller: RegeneratedMealPlanEntity
     deactivate MealService
-    
+
     Controller -> Supabase: from('meal_plans')\n  .update({'meals': mealsJson})\n  .eq('id', planId)
     activate Supabase
     Supabase -> Database: UPDATE meal_plans SET meals = ?\nWHERE id = ?
@@ -229,7 +256,7 @@ else Regeneruoti visą planą
     deactivate Database
     Supabase --> Controller: Success
     deactivate Supabase
-    
+
     Controller --> Page: MealPlanRegeneratedState()
     deactivate Controller
     Page --> User: Planas regeneruotas
@@ -258,33 +285,15 @@ deactivate Supabase
 Controller --> Page: MealPlanUpdatedState(\n  message: "Planas atnaujintas!"\n)
 deactivate Controller
 
-Page -> User: Rodo sėkmės pranešimą:\n✅ "Planas atnaujintas!"
+Page -> User: Rodo sėkmės pranešimą:\n"Planas atnaujintas!"
 deactivate Page
 
 note over User, Database
   **SVARBU:**
   - Galima redaguoti konkretų valgį, pridėti, pašalinti arba regeneruoti visą planą
-  - Užrakinti valgiai nekeičiami
-  - Shopping list automatiškai atnaujinamas
+  - Regeneravimas naudoja Gemini + Spoonacular API
+  - Užrakinti valgiai nekeičiami regeneruojant
+  - Shopping list automatiškai atnaujinamas po kiekvieno pakeitimo
 end note
 
 @enduml
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

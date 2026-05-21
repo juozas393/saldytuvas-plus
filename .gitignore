@@ -48,4 +48,20 @@ app.*.map.json
 AppData/
 AppData/**
 **/AppData/
-**/AppData/**scraper/.env
+**/AppData/**
+
+# Environment - niekada nekomituojame
+.env
+.env.local
+.env.*.local
+.env.*.secret
+*.secret
+mobile/.env
+scraper/.env
+supabase/.env
+
+# Test payload'ai su galimais secrets
+_test_*.json
+_deploy_payload.json
+_escaped_content.txt
+*_test_payload.json

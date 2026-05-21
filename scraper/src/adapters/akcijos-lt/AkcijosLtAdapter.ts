@@ -279,15 +279,9 @@ const FOOD_KEYWORDS = [
 ];
 
 // Category exclusion patterns (case-insensitive partial match)
+// Categories to EXCLUDE completely (drinks/alcohol only)
 const EXCLUDED_CATEGORY_PATTERNS = [
     'gėrim', 'alkohol', 'kava', 'arbata', 'sultys', 'nektar',
-    'buitin', 'chemij', 'valym',
-    'kosmetik', 'higien', 'asmens',
-    'vaist', 'medicinin', 'vitamin', 'papild',
-    'gyvūn', 'kūdiki', 'vaik',
-    'namų apyvok', 'įvairios',
-    'drabužiai', 'avalyn', 'tekstil',
-    'kita',
 ];
 
 // Pre-compiled regex for drink/coffee detection (v1 created this per-product call)
@@ -305,6 +299,10 @@ const NON_FOOD_TERMS = [
     'dušo', 'dezodorant', 'dantų', 'burnos', 'plaukų',
     'odos', 'veido', 'kūno', 'nagų', 'makiažo', 'lūpų',
     'somat', 'fairy', 'finish',
+    'patalynė', 'užvalkal', 'sauskeln', 'pledas', 'antklod',
+    'čiužin', 'kilim', 'žvakė', 'žvakių',
+    'sodinuk', 'gėlių svogūnėl', 'skintos rožės', 'skintos tulpės',
+    'skinti gvazdikai', 'žydintis augalas', 'vazoninė gėlė',
 ];
 
 interface AkcijosProduct {
@@ -426,15 +424,15 @@ export class AkcijosLtAdapter {
                 // Skip if already seen (dedup by ID)
                 if (this.allProducts.has(item.id)) continue;
 
-                // Skip excluded categories (partial match)
+                // Skip excluded categories (drinks/alcohol only)
                 const catLower = (item.category || '').toLowerCase();
                 if (EXCLUDED_CATEGORY_PATTERNS.some(pat => catLower.includes(pat))) continue;
 
                 // Skip drinks/coffee/alcohol by name or category
                 if (this.isDrinkOrCoffee(item, catLower)) continue;
 
-                // Skip non-food products by name
-                if (this.isNonFoodProduct(item)) continue;
+                // Non-food products: keep them but preserve their original category
+                // (they will be shown in promotions tab but filtered from meal planning)
 
                 // Must have a price
                 if (!item.price || item.price <= 0) continue;
@@ -475,10 +473,14 @@ export class AkcijosLtAdapter {
             return null; // bad timestamp, skip
         }
 
-        // Calculate discount % if not provided
+        // Calculate discount % - always verify API value against actual prices
         let discountPercent = item.percentageDiscount || null;
-        if (!discountPercent && item.oldPrice && item.price) {
-            discountPercent = Math.round((1 - item.price / item.oldPrice) * 100);
+        if (item.oldPrice && item.price && item.oldPrice > item.price) {
+            const calculated = Math.round((1 - item.price / item.oldPrice) * 100);
+            // Use calculated value if API value is missing or differs by >5pp
+            if (!discountPercent || Math.abs(discountPercent - calculated) > 5) {
+                discountPercent = calculated;
+            }
         }
 
         // Build unit info
@@ -496,6 +498,12 @@ export class AkcijosLtAdapter {
         let dealType: string | null = null;
         if (item.dealType && !/^-?\d+%$/.test(item.dealType.trim())) {
             dealType = item.dealType.trim();
+        }
+
+        // If no originalPrice, no discountPercent, and no dealType,
+        // mark as "AKCIJA" so the product isn't filtered out in the app
+        if (!item.oldPrice && !discountPercent && !dealType) {
+            dealType = 'AKCIJA';
         }
 
         return {

@@ -176,11 +176,15 @@ export class RimiAdapter extends BaseAdapter {
                     if (!name || name.length < 3) continue;
 
                     // --- DISCOUNT/CURRENT PRICE: .price-tag.card__price ---
+                    // DOM: <span class="sr-only">2.49 € per kg</span>
+                    //      <span aria-hidden="true">2</span>
+                    //      <div aria-hidden="true"><sup>49</sup><sub>€/kg</sub></div>
+                    // SVARBU: :scope > span gauna sr-only span su visu tekstu,
+                    // todėl naudojam aria-hidden span.
                     var discountPrice = null;
                     var priceTag = card.querySelector('.price-tag.card__price, .card__price');
                     if (priceTag) {
-                        // Price structure: <span>0</span><div><sup>35</sup><span>€</span></div>
-                        var wholeEl = priceTag.querySelector(':scope > span');
+                        var wholeEl = priceTag.querySelector('span[aria-hidden="true"]');
                         var centsEl = priceTag.querySelector('sup');
                         if (wholeEl) {
                             var whole = wholeEl.textContent.replace(/[^0-9]/g, '');
@@ -192,13 +196,19 @@ export class RimiAdapter extends BaseAdapter {
                     }
 
                     // --- ORIGINAL PRICE (crossed out): .old-price-tag.card__old-price ---
+                    // DOM: <span class="sr-only">Regular price: 0,99 €</span>
+                    //      <span aria-hidden="true">0,99€</span>
+                    // Naudojam aria-hidden span - jame švari kaina be "Regular price:" prefixo.
                     var originalPrice = null;
                     var oldPriceTag = card.querySelector('.old-price-tag.card__old-price, .card__old-price');
                     if (oldPriceTag) {
-                        var oldText = oldPriceTag.textContent || '';
-                        var oldMatch = oldText.match(/(\d+)[,.](\d{2})/);
-                        if (oldMatch) {
-                            originalPrice = parseFloat(oldMatch[1] + '.' + oldMatch[2]);
+                        var oldAriaSpan = oldPriceTag.querySelector('span[aria-hidden="true"]');
+                        if (oldAriaSpan) {
+                            var oldText = oldAriaSpan.textContent || '';
+                            var oldMatch = oldText.match(/(\d+)[,.](\d{2})/);
+                            if (oldMatch) {
+                                originalPrice = parseFloat(oldMatch[1] + '.' + oldMatch[2]);
+                            }
                         }
                     }
 
@@ -234,10 +244,14 @@ export class RimiAdapter extends BaseAdapter {
                     }
 
                     // --- UNIT PRICE: .card__price-per (informational only) ---
+                    // DOM: <span class="sr-only">Price per unit: 0,59 €/vnt.</span>
+                    //      <span aria-hidden="true">0,59 €/vnt.</span>
                     var pricePerUnit = null;
                     var unitEl = card.querySelector('.card__price-per');
                     if (unitEl) {
-                        pricePerUnit = unitEl.textContent.trim();
+                        var unitAriaSpan = unitEl.querySelector('span[aria-hidden="true"]');
+                        var rawUnit = unitAriaSpan ? unitAriaSpan.textContent : unitEl.textContent || '';
+                        pricePerUnit = rawUnit.replace(/\s+/g, ' ').trim() || null;
                     }
 
                     // --- IMAGE ---
